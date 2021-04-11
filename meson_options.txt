@@ -1,0 +1,2 @@
+option('multithreaded', type: 'feature', value: 'enabled', description: 'Enable multithreading support')
+option('minify', type: 'feature', value: 'disabled', description: 'Minify library size by excluding unnecessary/uncommon code')
