@@ -8,6 +8,9 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
+#ifndef _COVER_H
+#define _COVER_H 1
+
 #ifndef ZDICT_STATIC_LINKING_ONLY
 #  define ZDICT_STATIC_LINKING_ONLY
 #endif
@@ -150,3 +153,5 @@ void COVER_dictSelectionFree(COVER_dictSelection_t selection);
  COVER_dictSelection_t COVER_selectDict(BYTE* customDictContent, size_t dictBufferCapacity,
                        size_t dictContentSize, const BYTE* samplesBuffer, const size_t* samplesSizes, unsigned nbFinalizeSamples,
                        size_t nbCheckSamples, size_t nbSamples, ZDICT_cover_params_t params, size_t* offsets, size_t totalCompressedSize);
+
+#endif
