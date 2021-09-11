@@ -153,6 +153,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Debug.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\x86.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
@@ -160,6 +161,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Debug.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\x86_64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
@@ -167,6 +169,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Debug.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\ARM64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -174,6 +177,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Release.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\x86.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
@@ -181,6 +185,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Release.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\x86_64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
@@ -188,6 +193,7 @@
     <Import Project="..\..\..\..\Common.props" />
     <Import Project="..\..\..\..\LIB.props" />
     <Import Project="..\..\..\..\Release.props" />
+    <Import Project="..\..\..\..\vectorcall.props" />
     <Import Project="..\..\..\..\ARM64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
