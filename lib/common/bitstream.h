@@ -36,7 +36,7 @@ extern "C" {
 *  Target specific
 =========================================*/
 #ifndef ZSTD_NO_INTRINSICS
-#  if defined(__BMI__) && defined(__GNUC__)
+#  if (defined(__BMI__) && defined(__GNUC__)) || defined(_MSC_VER)
 #    include <immintrin.h>   /* support for bextr (experimental) */
 #  elif defined(__ICCARM__)
 #    include <intrinsics.h>
@@ -141,7 +141,9 @@ MEM_STATIC unsigned BIT_highbit32 (U32 val)
 {
     assert(val != 0);
     {
-#   if defined(_MSC_VER)   /* Visual */
+#   if __has_builtin(__builtin_clz)
+        return __builtin_clz (val) ^ 31;
+#   elif defined(_MSC_VER)   /* Visual */
 #       if STATIC_BMI2 == 1
             return _lzcnt_u32(val) ^ 31;
 #       else
