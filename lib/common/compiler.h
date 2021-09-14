@@ -181,7 +181,11 @@
 /*Like DYNAMIC_BMI2 but for compile time determination of BMI2 support*/
 #ifndef STATIC_BMI2
 #  if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_I86))
-#    ifdef __AVX2__  //MSVC does not have a BMI2 specific flag, but every CPU that supports AVX2 also supports BMI2
+#    if defined(__clang__)
+#       if defined(__LZCNT__) && defined(__BMI2__)
+#          define STATIC_BMI2 1
+#       endif
+#    elif defined(__AVX2__)  //MSVC does not have a BMI2 specific flag, but every CPU that supports AVX2 also supports BMI2
 #       define STATIC_BMI2 1
 #    endif
 #  elif defined(__BMI2__) && defined(__x86_64__) && defined(__GNUC__)
