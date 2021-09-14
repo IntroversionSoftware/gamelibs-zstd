@@ -116,6 +116,16 @@
   #endif
 #endif
 
+/* compat. with non-clang compilers */
+#ifndef __has_builtin
+#  define __has_builtin(x) 0
+#endif
+
+/* compat. with non-clang compilers */
+#ifndef __has_feature
+#  define __has_feature(x) 0
+#endif
+
 /* prefetch
  * can be disabled, by declaring NO_PREFETCH build macro */
 #if defined(NO_PREFETCH)
@@ -219,16 +229,6 @@
 #  elif defined(ZSTD_ARCH_ARM_NEON)
 #    include <arm_neon.h>
 #  endif
-#endif
-
-/* compat. with non-clang compilers */
-#ifndef __has_builtin
-#  define __has_builtin(x) 0
-#endif
-
-/* compat. with non-clang compilers */
-#ifndef __has_feature
-#  define __has_feature(x) 0
 #endif
 
 /* C-language Attributes are added in C23. */
