@@ -116,6 +116,16 @@
   #endif
 #endif
 
+/* compat. with non-clang compilers */
+#ifndef __has_builtin
+#  define __has_builtin(x) 0
+#endif
+
+/* compat. with non-clang compilers */
+#ifndef __has_feature
+#  define __has_feature(x) 0
+#endif
+
 /* prefetch
  * can be disabled, by declaring NO_PREFETCH build macro */
 #if defined(NO_PREFETCH)
@@ -220,16 +230,6 @@
 #    include <arm_neon.h>
 #  endif
 #endif  
-
-/* compat. with non-clang compilers */
-#ifndef __has_builtin
-#  define __has_builtin(x) 0
-#endif
-
-/* compat. with non-clang compilers */
-#ifndef __has_feature
-#  define __has_feature(x) 0
-#endif
 
 /* detects whether we are being compiled under msan */
 #ifndef ZSTD_MEMORY_SANITIZER
