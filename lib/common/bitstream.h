@@ -36,7 +36,7 @@ extern "C" {
 *  Target specific
 =========================================*/
 #ifndef ZSTD_NO_INTRINSICS
-#  if (defined(__BMI__) && defined(__GNUC__)) || defined(_MSC_VER)
+#  if (defined(__BMI__) && defined(__GNUC__)) || (defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)))
 #    include <immintrin.h>   /* support for bextr (experimental) */
 #  elif defined(__ICCARM__)
 #    include <intrinsics.h>
