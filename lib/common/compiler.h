@@ -54,7 +54,7 @@
 #endif
 
 /* UNUSED_ATTR tells the compiler it is okay if the function is unused. */
-#if defined(__GNUC__) || defined(__IAR_SYSTEMS_ICC__)
+#if defined(__GNUC__) || defined(__clang__) || defined(__IAR_SYSTEMS_ICC__)
 #  define UNUSED_ATTR __attribute__((unused))
 #else
 #  define UNUSED_ATTR
