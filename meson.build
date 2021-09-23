@@ -47,6 +47,12 @@ sources = [
     'lib/legacy/zstd_v07.c',
 ]
 
+if target_machine.cpu_family() == 'x86_64'
+    sources += [
+        'lib/decompress/huf_decompress_amd64.S',
+    ]
+endif
+
 incdirs = include_directories(incdirs)
 
 lib = static_library(

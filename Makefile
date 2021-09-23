@@ -75,8 +75,14 @@ SOURCES = \
 	lib/legacy/zstd_v06.c \
 	lib/legacy/zstd_v07.c
 
+ifneq ($(findstring x86_64,$(shell $(CC) $(CFLAGS) -dumpmachine)),)
+    SOURCES += \
+		lib/decompress/huf_decompress_amd64.S
+endif
+
 HEADERS_INST := $(patsubst lib/%,$(includedir)/%,$(HEADERS))
-OBJECTS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SOURCES))
+OBJECTS := $(filter %.o,$(patsubst %.c,$(OBJ_DIR)/%.o,$(SOURCES)))
+OBJECTS += $(filter %.o,$(patsubst %.S,$(OBJ_DIR)/%.o,$(SOURCES)))
 
 CFLAGS ?= -O2
 
@@ -107,6 +113,9 @@ $(OBJ_DIR)/$(LIB): $(OBJECTS) | $$(@D)/.
 	$(QUIET_RANLIB)$(RANLIB) $@
 
 $(OBJ_DIR)/%.o: %.c $(OBJ_DIR)/.cflags | $$(@D)/.
+	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ -c $<
+
+$(OBJ_DIR)/%.o: %.S $(OBJ_DIR)/.cflags | $$(@D)/.
 	$(QUIET_CC)$(CC) $(CFLAGS) -o $@ -c $<
 
 .PRECIOUS: $(OBJ_DIR)/. $(OBJ_DIR)%/.
