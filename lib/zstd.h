@@ -55,9 +55,9 @@ extern "C" {
 #ifdef ZSTD_DISABLE_DEPRECATE_WARNINGS
 #  define ZSTD_DEPRECATED(message) /* disable deprecation warnings */
 #else
-#  if defined (__cplusplus) && (__cplusplus >= 201402) /* C++14 or greater */
-#    define ZSTD_DEPRECATED(message) [[deprecated(message)]]
-#  elif (defined(GNUC) && (GNUC > 4 || (GNUC == 4 && GNUC_MINOR >= 5))) || defined(__clang__)
+//#  if defined (__cplusplus) && (__cplusplus >= 201402) /* C++14 or greater */
+//#    define ZSTD_DEPRECATED(message) [[deprecated(message)]]
+#  if (defined(GNUC) && (GNUC > 4 || (GNUC == 4 && GNUC_MINOR >= 5))) || defined(__clang__)
 #    define ZSTD_DEPRECATED(message) __attribute__((deprecated(message)))
 #  elif defined(__GNUC__) && (__GNUC__ >= 3)
 #    define ZSTD_DEPRECATED(message) __attribute__((deprecated))
