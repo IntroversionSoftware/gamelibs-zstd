@@ -47,7 +47,7 @@ sources = [
     'lib/legacy/zstd_v07.c',
 ]
 
-if target_machine.cpu_family() == 'x86_64'
+if target_machine.cpu_family() == 'x86_64' and compiler.get_id() != 'msvc'
     sources += [
         'lib/decompress/huf_decompress_amd64.S',
     ]
