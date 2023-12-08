@@ -123,7 +123,6 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\..\lib;$(ProjectDir)\..\..\programs\legacy;$(ProjectDir)..\..\lib\legacy;$(ProjectDir)..\..\lib\common;$(ProjectDir)..\..\lib\dictBuilder;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZSTD_MULTITHREAD=1;ZSTD_LEGACY_SUPPORT=5;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
