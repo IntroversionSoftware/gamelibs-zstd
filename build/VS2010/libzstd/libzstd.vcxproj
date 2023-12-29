@@ -56,13 +56,6 @@
     <ClCompile Include="..\..\..\lib\dictBuilder\fastcover.c" />
     <ClCompile Include="..\..\..\lib\dictBuilder\divsufsort.c" />
     <ClCompile Include="..\..\..\lib\dictBuilder\zdict.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v01.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v02.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v03.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v04.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v05.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v06.c" />
-    <ClCompile Include="..\..\..\lib\legacy\zstd_v07.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\lib\common\pool.h" />
@@ -75,13 +68,6 @@
     <ClInclude Include="..\..\..\lib\common\huf.h" />
     <ClInclude Include="..\..\..\lib\common\xxhash.h" />
     <ClInclude Include="..\..\..\lib\legacy\zstd_legacy.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v01.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v02.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v03.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v04.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v05.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v06.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_v07.h" />
     <ClInclude Include="..\..\..\lib\zstd.h" />
     <ClInclude Include="..\..\..\lib\common\zstd_internal.h" />
     <ClInclude Include="..\..\..\lib\compress\zstd_compress.h" />
