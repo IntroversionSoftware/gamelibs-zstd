@@ -1,12 +1,2 @@
-option('multiThreaded', type: 'feature', value: 'enabled', description: 'Enable Multithreaded')
-option('legacy', type: 'integer', min : 0, max : 8, value: '0', description: 'Enable legacy support')
-option('btLazy2', type: 'feature', value: 'enabled', description: 'Allow btLazy2 block compression')
-option('btOpt', type: 'feature', value: 'enabled', description: 'Allow btOpt block compression')
-option('btUltra', type: 'feature', value: 'enabled', description: 'Allow btUltra block compression')
-option('dFast', type: 'feature', value: 'enabled', description: 'Allow dFast block compression')
-option('greedy', type: 'feature', value: 'enabled', description: 'Allow greedy block compression')
-option('lazy2', type: 'feature', value: 'enabled', description: 'Allow lazy2 block compression')
-option('forceDecompressSequenceShort', type: 'feature',
-	value: 'disabled',
-	description: 'Force decompression sequence to use shorts'
-)
+option('multithreaded', type: 'feature', value: 'enabled', description: 'Enable multithreading support')
+option('minify', type: 'feature', value: 'disabled', description: 'Minify library size by excluding unnecessary/uncommon code')
