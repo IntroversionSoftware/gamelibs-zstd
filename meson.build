@@ -1,8 +1,9 @@
-project('zstd', 'c', version: '1.4.9')
+project('zstd', 'c', version: '1.5.5')
 
 compiler = meson.get_compiler('c')
 link_deps = []
 
+c_flags = []
 incdirs = ['.', 'lib']
 
 sources = [
@@ -38,6 +39,7 @@ sources = [
     'lib/dictBuilder/divsufsort.c',
     'lib/dictBuilder/fastcover.c',
     'lib/dictBuilder/zdict.c',
+
     'lib/legacy/zstd_v01.c',
     'lib/legacy/zstd_v02.c',
     'lib/legacy/zstd_v03.c',
@@ -48,24 +50,36 @@ sources = [
 ]
 
 if target_machine.cpu_family() == 'x86_64' and compiler.get_id() != 'msvc'
-    sources += [
-        'lib/decompress/huf_decompress_amd64.S',
-    ]
+    sources += 'lib/decompress/huf_decompress_amd64.S'
 endif
+
+c_flags += '-DZSTD_MULTITHREAD=' + get_option('multiThreaded').enabled().to_string('1', '0')
+
+c_flags += '-DZSTD_EXCLUDE_BTLAZY2_BLOCK_COMPRESSOR=' + get_option('btLazy2').disabled().to_string('1', '0')
+c_flags += '-DZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR=' + get_option('btOpt').disabled().to_string('1', '0')
+c_flags += '-DZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR=' + get_option('btUltra').disabled().to_string('1', '0')
+c_flags += '-DZSTD_EXCLUDE_DFAST_BLOCK_COMPRESSOR=' + get_option('dFast').disabled().to_string('1', '0')
+c_flags += '-DZSTD_EXCLUDE_GREEDY_BLOCK_COMPRESSOR=' + get_option('greedy').disabled().to_string('1', '0')
+c_flags += '-DZSTD_EXCLUDE_LAZY2_BLOCK_COMPRESSOR=' + get_option('lazy2').disabled().to_string('1', '0')
+c_flags += '-DZSTD_FORCE_DECOMPRESS_SEQUENCES_SHORT=' + get_option('forceDecompressSequenceShort').enabled().to_string('1', '0')
+
+c_flags += '-DZSTD_LEGACY_SUPPORT=' + get_option('legacy').to_string()
 
 incdirs = include_directories(incdirs)
 
-lib = static_library(
+zstd_lib = library(
     'zstd',
     sources,
+    c_args: c_flags,
     include_directories: incdirs,
     dependencies: link_deps,
 )
 
 zstd_dep = declare_dependency(
+    compile_args: c_flags,
     include_directories: incdirs,
     dependencies: link_deps,
-    link_with: lib,
+    link_with: zstd_lib,
     version: meson.project_version()
 )
 
