@@ -96,7 +96,11 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\..\..\..\Toolset.props" />
+    <!-- Global Reference sheet -->
+    <Import Project="..\..\..\..\Setup.props" Condition="!exists('..\..\..\..\Toolset.props') And exists('..\..\..\..\Setup.props')" />
+
+    <!-- Toolset Property sheet -->
+    <Import Project="..\..\..\..\Toolset.props" Condition="exists('..\..\..\..\Toolset.props')" />
   </ImportGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -104,7 +108,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\..\Master.props" />
+    <!-- Master sheet -->
+    <Import Project="..\..\..\..\Master.props" Condition="exists('..\..\..\..\Master.props')" />
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
