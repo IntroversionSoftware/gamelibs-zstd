@@ -28,6 +28,7 @@ sources = [
     'lib/compress/zstd_lazy.c',
     'lib/compress/zstd_ldm.c',
     'lib/compress/zstd_opt.c',
+    'lib/compress/zstd_preSplit.c',
     'lib/decompress/huf_decompress.c',
     'lib/decompress/zstd_ddict.c',
     'lib/decompress/zstd_decompress.c',
