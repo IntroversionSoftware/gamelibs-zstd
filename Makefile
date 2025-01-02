@@ -33,7 +33,10 @@ prefix ?= /usr/local
 libdir := $(prefix)/lib
 includedir := $(prefix)/include
 
-HEADERS = lib/zstd.h
+HEADERS = \
+	lib/zstd.h \
+	lib/zstd_errors.h
+
 SOURCES = \
 	lib/common/debug.c \
 	lib/common/entropy_common.c \
