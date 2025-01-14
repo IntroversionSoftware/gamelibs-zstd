@@ -27,62 +27,100 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\lib\common\pool.c" />
+    <ClInclude Include="..\..\..\lib\common\allocations.h" />
+    <ClInclude Include="..\..\..\lib\common\bits.h" />
+    <ClInclude Include="..\..\..\lib\common\bitstream.h" />
+    <ClInclude Include="..\..\..\lib\common\compiler.h" />
+    <ClInclude Include="..\..\..\lib\common\cpu.h" />
+    <ClInclude Include="..\..\..\lib\common\debug.h" />
+    <ClInclude Include="..\..\..\lib\common\error_private.h" />
+    <ClInclude Include="..\..\..\lib\common\fse.h" />
+    <ClInclude Include="..\..\..\lib\common\huf.h" />
+    <ClInclude Include="..\..\..\lib\common\mem.h" />
+    <ClInclude Include="..\..\..\lib\common\pool.h" />
+    <ClInclude Include="..\..\..\lib\common\portability_macros.h" />
+    <ClInclude Include="..\..\..\lib\common\threading.h" />
+    <ClInclude Include="..\..\..\lib\common\xxhash.h" />
+    <ClInclude Include="..\..\..\lib\common\zstd_deps.h" />
+    <ClInclude Include="..\..\..\lib\common\zstd_internal.h" />
+    <ClInclude Include="..\..\..\lib\common\zstd_trace.h" />
+    <ClInclude Include="..\..\..\lib\compress\clevels.h" />
+    <ClInclude Include="..\..\..\lib\compress\hist.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstdmt_compress.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_compress_internal.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_compress_literals.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_compress_sequences.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_compress_superblock.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_cwksp.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_double_fast.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_fast.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_lazy.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_ldm.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_ldm_geartab.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_opt.h" />
+    <ClInclude Include="..\..\..\lib\compress\zstd_preSplit.h" />
+    <ClInclude Include="..\..\..\lib\decompress\zstd_ddict.h" />
+    <ClInclude Include="..\..\..\lib\decompress\zstd_decompress_block.h" />
+    <ClInclude Include="..\..\..\lib\decompress\zstd_decompress_internal.h" />
+    <ClInclude Include="..\..\..\lib\deprecated\zbuff.h" />
+    <ClInclude Include="..\..\..\lib\dictBuilder\cover.h" />
+    <ClInclude Include="..\..\..\lib\dictBuilder\divsufsort.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_legacy.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v01.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v02.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v03.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v04.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v05.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v06.h" />
+    <ClInclude Include="..\..\..\lib\legacy\zstd_v07.h" />
+    <ClInclude Include="..\..\..\lib\zdict.h" />
+    <ClInclude Include="..\..\..\lib\zstd.h" />
+    <ClInclude Include="..\..\..\lib\zstd_errors.h" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="..\..\..\lib\common\debug.c" />
-    <ClCompile Include="..\..\..\lib\common\threading.c" />
     <ClCompile Include="..\..\..\lib\common\entropy_common.c" />
-    <ClCompile Include="..\..\..\lib\compress\hist.c" />
     <ClCompile Include="..\..\..\lib\common\error_private.c" />
+    <ClCompile Include="..\..\..\lib\common\fse_decompress.c" />
+    <ClCompile Include="..\..\..\lib\common\pool.c" />
+    <ClCompile Include="..\..\..\lib\common\threading.c" />
     <ClCompile Include="..\..\..\lib\common\xxhash.c" />
     <ClCompile Include="..\..\..\lib\common\zstd_common.c" />
-    <ClCompile Include="..\..\..\lib\common\fse_decompress.c" />
     <ClCompile Include="..\..\..\lib\compress\fse_compress.c" />
+    <ClCompile Include="..\..\..\lib\compress\hist.c" />
     <ClCompile Include="..\..\..\lib\compress\huf_compress.c" />
+    <ClCompile Include="..\..\..\lib\compress\zstdmt_compress.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_compress.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_compress_literals.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_compress_sequences.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_compress_superblock.c" />
-    <ClCompile Include="..\..\..\lib\compress\zstd_preSplit.c" />
-    <ClCompile Include="..\..\..\lib\compress\zstd_fast.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_double_fast.c" />
+    <ClCompile Include="..\..\..\lib\compress\zstd_fast.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_lazy.c" />
-    <ClCompile Include="..\..\..\lib\compress\zstd_opt.c" />
     <ClCompile Include="..\..\..\lib\compress\zstd_ldm.c" />
-    <ClCompile Include="..\..\..\lib\compress\zstdmt_compress.c" />
+    <ClCompile Include="..\..\..\lib\compress\zstd_opt.c" />
+    <ClCompile Include="..\..\..\lib\compress\zstd_preSplit.c" />
     <ClCompile Include="..\..\..\lib\decompress\huf_decompress.c" />
+    <ClCompile Include="..\..\..\lib\decompress\zstd_ddict.c" />
     <ClCompile Include="..\..\..\lib\decompress\zstd_decompress.c" />
     <ClCompile Include="..\..\..\lib\decompress\zstd_decompress_block.c" />
-    <ClCompile Include="..\..\..\lib\decompress\zstd_ddict.c" />
+    <ClCompile Include="..\..\..\lib\deprecated\zbuff_common.c" />
+    <ClCompile Include="..\..\..\lib\deprecated\zbuff_compress.c" />
+    <ClCompile Include="..\..\..\lib\deprecated\zbuff_decompress.c" />
     <ClCompile Include="..\..\..\lib\dictBuilder\cover.c" />
-    <ClCompile Include="..\..\..\lib\dictBuilder\fastcover.c" />
     <ClCompile Include="..\..\..\lib\dictBuilder\divsufsort.c" />
+    <ClCompile Include="..\..\..\lib\dictBuilder\fastcover.c" />
     <ClCompile Include="..\..\..\lib\dictBuilder\zdict.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v01.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v02.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v03.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v04.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v05.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v06.c" />
+    <ClCompile Include="..\..\..\lib\legacy\zstd_v07.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\lib\common\pool.h" />
-    <ClInclude Include="..\..\..\lib\common\threading.h" />
-    <ClInclude Include="..\..\..\lib\common\bitstream.h" />
-    <ClInclude Include="..\..\..\lib\common\error_private.h" />
-    <ClInclude Include="..\..\..\lib\zstd_errors.h" />
-    <ClInclude Include="..\..\..\lib\common\mem.h" />
-    <ClInclude Include="..\..\..\lib\common\fse.h" />
-    <ClInclude Include="..\..\..\lib\common\huf.h" />
-    <ClInclude Include="..\..\..\lib\common\xxhash.h" />
-    <ClInclude Include="..\..\..\lib\legacy\zstd_legacy.h" />
-    <ClInclude Include="..\..\..\lib\zstd.h" />
-    <ClInclude Include="..\..\..\lib\common\zstd_internal.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_compress.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_compress_literals.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_compress_sequences.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_cwksp.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_compress_superblock.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_fast.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_double_fast.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_lazy.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_opt.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstd_ldm.h" />
-    <ClInclude Include="..\..\..\lib\compress\zstdmt_compress.h" />
-    <ClInclude Include="..\..\..\lib\decompress\zstd_ddict.h" />
+    <None Include="..\..\..\lib\decompress\huf_decompress_amd64.S" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8BFD8150-94D5-4BF9-8A50-7BD9929A0850}</ProjectGuid>
@@ -98,7 +136,6 @@
   <ImportGroup Label="PropertySheets">
     <!-- Global Reference sheet -->
     <Import Project="..\..\..\..\Setup.props" Condition="!exists('..\..\..\..\Toolset.props') And exists('..\..\..\..\Setup.props')" />
-
     <!-- Toolset Property sheet -->
     <Import Project="..\..\..\..\Toolset.props" Condition="exists('..\..\..\..\Toolset.props')" />
   </ImportGroup>
