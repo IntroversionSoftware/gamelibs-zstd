@@ -1570,7 +1570,11 @@ then
     ZSTD_NBTHREADS=3a7 zstd -f mt_tmp # malformed env var, warn and revert to default setting
     ZSTD_NBTHREADS=50000000000 zstd -f mt_tmp # numeric value too large, warn and revert to default setting=
     ZSTD_NBTHREADS=2  zstd -f mt_tmp # correct usage
-    ZSTD_NBTHREADS=1  zstd -f mt_tmp # correct usage: single thread
+    ZSTD_NBTHREADS=1  zstd -f mt_tmp # correct usage: single worker
+    ZSTD_NBTHREADS=4 zstd -f mt_tmp -vv 2>&1 | grep "4 worker threads" # check message
+    zstd -tq mt_tmp.zst
+    ZSTD_NBTHREADS=0 zstd -f mt_tmp -vv 2>&1 | grep "core(s) detected" # check core count autodetection is triggered
+    zstd -tq mt_tmp.zst
     # temporary envvar changes in the above tests would actually persist in macos /bin/sh
     unset ZSTD_NBTHREADS
     rm -f mt_tmp*
