@@ -1338,14 +1338,13 @@ int main(int argCount, const char* argv[])
     if ((nbWorkers==NBWORKERS_AUTOCPU) && (!singleThread)) {
         /* automatically set # workers based on # of reported cpus */
         if (defaultLogicalCores) {
-            nbWorkers = UTIL_countLogicalCores();
+            nbWorkers = (unsigned)UTIL_countLogicalCores();
             DISPLAYLEVEL(3, "Note: %d logical core(s) detected \n", nbWorkers);
         } else {
-            nbWorkers = UTIL_countPhysicalCores();
+            nbWorkers = (unsigned)UTIL_countPhysicalCores();
             DISPLAYLEVEL(3, "Note: %d physical core(s) detected \n", nbWorkers);
         }
     }
-    assert(nbWorkers >= 0);
     if (operation != zom_bench)
         DISPLAYLEVEL(4, "Compressing with %u worker threads \n", nbWorkers);
 #else
