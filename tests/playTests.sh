@@ -1,7 +1,7 @@
 #!/bin/sh
 
 set -e # exit immediately on error
-# set -x # print commands before execution (debug)
+set -x # print commands before execution (debug)
 
 unset ZSTD_CLEVEL
 unset ZSTD_NBTHREADS
@@ -16,13 +16,7 @@ datagen() {
     "$DATAGEN_BIN" "$@"
 }
 
-zstd() {
-    if [ -z "$EXE_PREFIX" ]; then
-        "$ZSTD_BIN" "$@"
-    else
-        "$EXE_PREFIX" "$ZSTD_BIN" "$@"
-    fi
-}
+alias zstd="$EXE_PREFIX $ZSTD_BIN"
 
 sudoZstd() {
     if [ -z "$EXE_PREFIX" ]; then
@@ -1563,18 +1557,16 @@ then
     println "\n===>  zstdmt environment variable tests "
     echo "multifoo" >> mt_tmp
     ZSTD_NBTHREADS=-3 zstd -f mt_tmp # negative value, warn and revert to default setting
-    ZSTD_NBTHREADS=''  zstd -f mt_tmp # empty env var, warn and revert to default setting
-    ZSTD_NBTHREADS=-   zstd -f mt_tmp # malformed env var, warn and revert to default setting
-    ZSTD_NBTHREADS=a   zstd -f mt_tmp # malformed env var, warn and revert to default setting
-    ZSTD_NBTHREADS=+a  zstd -f mt_tmp # malformed env var, warn and revert to default setting
+    ZSTD_NBTHREADS='' zstd -f mt_tmp # empty env var, warn and revert to default setting
+    ZSTD_NBTHREADS=-  zstd -f mt_tmp # malformed env var, warn and revert to default setting
+    ZSTD_NBTHREADS=a  zstd -f mt_tmp # malformed env var, warn and revert to default setting
+    ZSTD_NBTHREADS=+a zstd -f mt_tmp # malformed env var, warn and revert to default setting
     ZSTD_NBTHREADS=3a7 zstd -f mt_tmp # malformed env var, warn and revert to default setting
     ZSTD_NBTHREADS=50000000000 zstd -f mt_tmp # numeric value too large, warn and revert to default setting=
     ZSTD_NBTHREADS=2  zstd -f mt_tmp # correct usage
     ZSTD_NBTHREADS=1  zstd -f mt_tmp # correct usage: single worker
-    ZSTD_NBTHREADS=4 zstd -f mt_tmp -vv 2>&1 | grep "4 worker threads" # check message
-    zstd -tq mt_tmp.zst
-    ZSTD_NBTHREADS=0 zstd -f mt_tmp -vv 2>&1 | grep "core(s) detected" # check core count autodetection is triggered
-    zstd -tq mt_tmp.zst
+    ZSTD_NBTHREADS=4  zstd -f mt_tmp -vv 2>&1 | $GREP "4 worker threads" # check message
+    ZSTD_NBTHREADS=0  zstd -f mt_tmp -vv 2>&1 | $GREP "core(s) detected" # check core count autodetection is triggered
     # temporary envvar changes in the above tests would actually persist in macos /bin/sh
     unset ZSTD_NBTHREADS
     rm -f mt_tmp*

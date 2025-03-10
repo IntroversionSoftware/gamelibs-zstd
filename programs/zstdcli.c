@@ -686,6 +686,12 @@ static void printVersion(void)
             DISPLAYOUT("lz4 version %s\n", FIO_lz4Version());
             DISPLAYOUT("lzma version %s\n", FIO_lzmaVersion());
 
+        #ifdef ZSTD_MULTITHREAD
+            DISPLAYOUT("supports Multithreading \n");
+        #else
+            DISPLAYOUT("single-thread operations only \n");
+        #endif
+
             /* posix support */
         #ifdef _POSIX_C_SOURCE
             DISPLAYOUT("_POSIX_C_SOURCE defined: %ldL\n", (long) _POSIX_C_SOURCE);
@@ -1336,7 +1342,7 @@ int main(int argCount, const char* argv[])
 
 #ifdef ZSTD_MULTITHREAD
     if ((nbWorkers==NBWORKERS_AUTOCPU) && (!singleThread)) {
-        /* automatically set # workers based on # of reported cpus */
+        /* automatically set # workers based on # of reported cpu cores */
         if (defaultLogicalCores) {
             nbWorkers = (unsigned)UTIL_countLogicalCores();
             DISPLAYLEVEL(3, "Note: %d logical core(s) detected \n", nbWorkers);
@@ -1345,7 +1351,7 @@ int main(int argCount, const char* argv[])
             DISPLAYLEVEL(3, "Note: %d physical core(s) detected \n", nbWorkers);
         }
     }
-    if (operation != zom_bench)
+    if (operation == zom_compress)
         DISPLAYLEVEL(4, "Compressing with %u worker threads \n", nbWorkers);
 #else
     (void)singleThread; (void)nbWorkers; (void)defaultLogicalCores;
