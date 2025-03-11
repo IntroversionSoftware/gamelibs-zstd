@@ -16,7 +16,7 @@ datagen() {
     "$DATAGEN_BIN" "$@"
 }
 
-alias zstd="$EXE_PREFIX $ZSTD_BIN"
+alias zstd='$EXE_PREFIX $ZSTD_BIN'
 
 sudoZstd() {
     if [ -z "$EXE_PREFIX" ]; then
