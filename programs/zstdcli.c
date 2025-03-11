@@ -1350,7 +1350,7 @@ int main(int argCount, const char* argv[])
     if (operation == zom_compress)
         DISPLAYLEVEL(4, "Compressing with %u worker threads \n", nbWorkers);
 #else
-    (void)singleThread; (void)nbWorkers; (void)defaultLogicalCores;
+    (void)singleThread; (void)nbWorkers; (void)defaultLogicalCores; (void)setThreads_non1;
 #endif
 
     g_utilDisplayLevel = g_displayLevel;
