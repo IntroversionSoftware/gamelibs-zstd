@@ -822,15 +822,6 @@ static unsigned init_nbWorkers(void) {
             CLEAN_RETURN(1);      \
 }   }   }
 
-#define NEXT_INT32(_vari32) {              \
-    const char* __nb;                      \
-    NEXT_FIELD(__nb);                      \
-    _vari32 = (int)readU32FromChar(&__nb); \
-    if(*__nb != 0) {                       \
-        errorOut("error: only numeric values with optional suffixes K, KB, KiB, M, MB, MiB are allowed"); \
-    }                                      \
-}
-
 #define NEXT_UINT32(_varu32) {        \
     const char* __nb;                 \
     NEXT_FIELD(__nb);                 \
@@ -887,7 +878,8 @@ int main(int argCount, const char* argv[])
         removeSrcFile = 0,
         cLevel = init_cLevel(),
         ultra = 0,
-        cLevelLast = MINCLEVEL - 1; /* for benchmark range */
+        cLevelLast = MINCLEVEL - 1, /* for benchmark range */
+        setThreads_non1 = 0;
     unsigned nbWorkers = init_nbWorkers();
     ZSTD_ParamSwitch_e mmapDict = ZSTD_ps_auto;
     ZSTD_ParamSwitch_e useRowMatchFinder = ZSTD_ps_auto;
@@ -1090,7 +1082,7 @@ int main(int argCount, const char* argv[])
                   continue;
                 }
 #endif
-                if (longCommandWArg(&argument, "--threads")) { NEXT_UINT32(nbWorkers); continue; }
+                if (longCommandWArg(&argument, "--threads")) { NEXT_UINT32(nbWorkers); setThreads_non1 = (nbWorkers != 1); continue; }
                 if (longCommandWArg(&argument, "--memlimit")) { NEXT_UINT32(memLimit); continue; }
                 if (longCommandWArg(&argument, "--memory")) { NEXT_UINT32(memLimit); continue; }
                 if (longCommandWArg(&argument, "--memlimit-decompress")) { NEXT_UINT32(memLimit); continue; }
@@ -1297,6 +1289,7 @@ int main(int argCount, const char* argv[])
                 case 'T':
                     argument++;
                     nbWorkers = readU32FromChar(&argument);
+                    setThreads_non1 = (nbWorkers != 1);
                     break;
 
                     /* Dictionary Selection level */
@@ -1341,6 +1334,9 @@ int main(int argCount, const char* argv[])
     DISPLAYLEVEL(3, WELCOME_MESSAGE);
 
 #ifdef ZSTD_MULTITHREAD
+    if ((operation==zom_decompress) && (setThreads_non1)) {
+        DISPLAYLEVEL(2, "Warning : decompression does not support multi-threading\n");
+    }
     if ((nbWorkers==NBWORKERS_AUTOCPU) && (!singleThread)) {
         /* automatically set # workers based on # of reported cpu cores */
         if (defaultLogicalCores) {
