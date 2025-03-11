@@ -193,9 +193,11 @@ The file structure is designed to make this selection manually achievable for an
   and assembly decoding loops. You may want to use this macro if these loops are
   slower on your platform.
 
-- The macro `ZSTD_USE_C90_QSORT` forces usage of C90's `qsort()`,
-  for situations where the code cannot determine that `qsort_r()` is not supported,
-  such as, for example, older versions of `musl`.
+- The macro `ZDICT_QSORT` can enforce selection of a specific sorting variant.
+  It can be notably set as `ZDICT_QSORT=ZDICT_QSORT_C90`,
+  for situations where autodetection fails,
+  for example with older versions of `musl`.
+  Other selectable suffixes are `_GNU`, `_APPLE` and `_MSVC`.
 
 #### Windows : using MinGW+MSYS to create DLL
 

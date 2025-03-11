@@ -39,6 +39,7 @@
 #  define ZDICT_STATIC_LINKING_ONLY
 #endif
 
+#include "../common/debug.h" /* DEBUG_STATIC_ASSERT */
 #include "../common/mem.h" /* read */
 #include "../common/pool.h" /* POOL_ctx */
 #include "../common/threading.h" /* ZSTD_pthread_mutex_t */
@@ -59,6 +60,29 @@
 */
 #define COVER_MAX_SAMPLES_SIZE (sizeof(size_t) == 8 ? ((unsigned)-1) : ((unsigned)1 GB))
 #define COVER_DEFAULT_SPLITPOINT 1.0
+
+/**
+ * Select the qsort() variant used by cover
+ */
+#define ZDICT_QSORT_MIN 0
+#define ZDICT_QSORT_C90 ZDICT_QSORT_MIN
+#define ZDICT_QSORT_GNU 1
+#define ZDICT_QSORT_APPLE 2
+#define ZDICT_QSORT_MSVC ZDICT_QSORT_MAX
+#define ZDICT_QSORT_MAX 3
+
+#ifndef ZDICT_QSORT
+# if defined(__APPLE__)
+#   define ZDICT_QSORT ZDICT_QSORT_APPLE /* uses qsort_r() with a different order for parameters */
+# elif defined(_GNU_SOURCE)
+#   define ZDICT_QSORT ZDICT_QSORT_GNU /* uses qsort_r() */
+# elif defined(_WIN32) && defined(_MSC_VER)
+#   define ZDICT_QSORT ZDICT_QSORT_MSVC /* uses qsort_s() */
+# else
+#   define ZDICT_QSORT ZDICT_QSORT_C90 /* uses standard qsort() which is not re-entrant (requires global variable) */
+# endif
+#endif
+
 
 /*-*************************************
 *  Console display
@@ -234,8 +258,7 @@ typedef struct {
   int displayLevel;
 } COVER_ctx_t;
 
-#if defined(ZSTD_USE_C90_QSORT) \
-  || (!defined(_GNU_SOURCE) && !defined(__APPLE__) && !defined(_MSC_VER))
+#if ZDICT_QSORT == ZDICT_QSORT_C90
 /* Use global context for non-reentrant sort functions */
 static COVER_ctx_t *g_coverCtx = NULL;
 #endif
@@ -282,9 +305,9 @@ static int COVER_cmp8(COVER_ctx_t *ctx, const void *lp, const void *rp) {
 /**
  * Same as COVER_cmp() except ties are broken by pointer value
  */
-#if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
+#if (ZDICT_QSORT == ZDICT_QSORT_MSVC) || (ZDICT_QSORT == ZDICT_QSORT_APPLE)
 static int WIN_CDECL COVER_strict_cmp(void* g_coverCtx, const void* lp, const void* rp) {
-#elif defined(_GNU_SOURCE) && !defined(ZSTD_USE_C90_QSORT)
+#elif (ZDICT_QSORT == ZDICT_QSORT_GNU)
 static int COVER_strict_cmp(const void *lp, const void *rp, void *g_coverCtx) {
 #else /* C90 fallback.*/
 static int COVER_strict_cmp(const void *lp, const void *rp) {
@@ -298,9 +321,9 @@ static int COVER_strict_cmp(const void *lp, const void *rp) {
 /**
  * Faster version for d <= 8.
  */
-#if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
+#if (ZDICT_QSORT == ZDICT_QSORT_MSVC) || (ZDICT_QSORT == ZDICT_QSORT_APPLE)
 static int WIN_CDECL COVER_strict_cmp8(void* g_coverCtx, const void* lp, const void* rp) {
-#elif defined(_GNU_SOURCE) && !defined(ZSTD_USE_C90_QSORT)
+#elif (ZDICT_QSORT == ZDICT_QSORT_GNU)
 static int COVER_strict_cmp8(const void *lp, const void *rp, void *g_coverCtx) {
 #else /* C90 fallback.*/
 static int COVER_strict_cmp8(const void *lp, const void *rp) {
@@ -317,20 +340,26 @@ static int COVER_strict_cmp8(const void *lp, const void *rp) {
  * Hopefully when C11 become the norm, we will be able
  * to clean it up.
  */
-static void stableSort(COVER_ctx_t *ctx) {
-#if defined(__APPLE__)
+static void stableSort(COVER_ctx_t *ctx)
+{
+    DEBUG_STATIC_ASSERT(ZDICT_QSORT_MIN <= ZDICT_QSORT && ZDICT_QSORT <= ZDICT_QSORT_MAX);
+#if (ZDICT_QSORT == ZDICT_QSORT_APPLE)
     qsort_r(ctx->suffix, ctx->suffixSize, sizeof(U32),
             ctx,
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp));
-#elif defined(_GNU_SOURCE) && !defined(ZSTD_USE_C90_QSORT)
+#elif (ZDICT_QSORT == ZDICT_QSORT_GNU)
     qsort_r(ctx->suffix, ctx->suffixSize, sizeof(U32),
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
             ctx);
-#elif defined(_WIN32) && defined(_MSC_VER)
+#elif (ZDICT_QSORT == ZDICT_QSORT_MSVC)
     qsort_s(ctx->suffix, ctx->suffixSize, sizeof(U32),
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
             ctx);
 #elif defined(__OpenBSD__)
+    /* On OpenBSD, qsort() is not guaranteed to be stable, their mergesort() is.
+     * Note(@cyan): qsort() is never guaranteed to be stable,
+     *              so why would this property only matter for OpenBSD ?
+     */
     g_coverCtx = ctx;
     mergesort(ctx->suffix, ctx->suffixSize, sizeof(U32),
           (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp));
@@ -782,7 +811,7 @@ ZDICTLIB_STATIC_API size_t ZDICT_trainFromBuffer_cover(
   BYTE* const dict = (BYTE*)dictBuffer;
   COVER_ctx_t ctx;
   COVER_map_t activeDmers;
-  const int displayLevel = parameters.zParams.notificationLevel;
+  const int displayLevel = (int)parameters.zParams.notificationLevel;
   parameters.splitPoint = 1.0;
   /* Checks */
   if (!COVER_checkParameters(parameters, dictBufferCapacity)) {
