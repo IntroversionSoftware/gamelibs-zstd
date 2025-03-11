@@ -44,7 +44,7 @@
 #endif
 
 #ifndef ZSTDCLI_NBTHREADS_DEFAULT
-#define ZSTDCLI_NBTHREADS_DEFAULT MAX(1, MIN(4, UTIL_countLogicalCores() / 4))
+#define ZSTDCLI_NBTHREADS_DEFAULT (unsigned)(MAX(1, MIN(4, UTIL_countLogicalCores() / 4)))
 #endif
 
 
@@ -94,6 +94,7 @@ static U32 g_ldmBucketSizeLog = LDM_PARAM_DEFAULT;
 
 
 #define DEFAULT_ACCEL 1
+#define NBWORKERS_AUTOCPU 0
 
 typedef enum { cover, fastCover, legacy } dictType;
 
@@ -685,6 +686,12 @@ static void printVersion(void)
             DISPLAYOUT("lz4 version %s\n", FIO_lz4Version());
             DISPLAYOUT("lzma version %s\n", FIO_lzmaVersion());
 
+        #ifdef ZSTD_MULTITHREAD
+            DISPLAYOUT("supports Multithreading \n");
+        #else
+            DISPLAYOUT("single-thread operations only \n");
+        #endif
+
             /* posix support */
         #ifdef _POSIX_C_SOURCE
             DISPLAYOUT("_POSIX_C_SOURCE defined: %ldL\n", (long) _POSIX_C_SOURCE);
@@ -745,7 +752,7 @@ static void printActualCParams(const char* filename, const char* dictFileName, i
 
 /* Environment variables for parameter setting */
 #define ENV_CLEVEL "ZSTD_CLEVEL"
-#define ENV_NBTHREADS "ZSTD_NBTHREADS"    /* takes lower precedence than directly specifying -T# in the CLI */
+#define ENV_NBWORKERS "ZSTD_NBTHREADS"    /* takes lower precedence than directly specifying -T# in the CLI */
 
 /* pick up environment variable */
 static int init_cLevel(void) {
@@ -775,26 +782,28 @@ static int init_cLevel(void) {
     return ZSTDCLI_CLEVEL_DEFAULT;
 }
 
+static unsigned init_nbWorkers(void) {
 #ifdef ZSTD_MULTITHREAD
-static int default_nbThreads(void) {
-    const char* const env = getenv(ENV_NBTHREADS);
+    const char* const env = getenv(ENV_NBWORKERS);
     if (env != NULL) {
         const char* ptr = env;
         if ((*ptr>='0') && (*ptr<='9')) {
             unsigned nbThreads;
             if (readU32FromCharChecked(&ptr, &nbThreads)) {
-                DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: numeric value too large \n", ENV_NBTHREADS, env);
+                DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: numeric value too large \n", ENV_NBWORKERS, env);
                 return ZSTDCLI_NBTHREADS_DEFAULT;
             } else if (*ptr == 0) {
-                return (int)nbThreads;
+                return nbThreads;
             }
         }
-        DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: not a valid unsigned value \n", ENV_NBTHREADS, env);
+        DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: not a valid unsigned value \n", ENV_NBWORKERS, env);
     }
 
     return ZSTDCLI_NBTHREADS_DEFAULT;
-}
+#else
+    return 1;
 #endif
+}
 
 #define NEXT_FIELD(ptr) {         \
     if (*argument == '=') {       \
@@ -874,13 +883,15 @@ int main(int argCount, const char* argv[])
         singleThread = 0,
         defaultLogicalCores = 0,
         showDefaultCParams = 0,
-        ultra=0,
-        contentSize=1,
-        removeSrcFile=0;
-    ZSTD_ParamSwitch_e mmapDict=ZSTD_ps_auto;
+        contentSize = 1,
+        removeSrcFile = 0,
+        cLevel = init_cLevel(),
+        ultra = 0,
+        cLevelLast = MINCLEVEL - 1; /* for benchmark range */
+    unsigned nbWorkers = init_nbWorkers();
+    ZSTD_ParamSwitch_e mmapDict = ZSTD_ps_auto;
     ZSTD_ParamSwitch_e useRowMatchFinder = ZSTD_ps_auto;
     FIO_compressionType_t cType = FIO_zstdCompression;
-    int nbWorkers = -1; /* -1 means unset */
     double compressibility = -1.0;  /* lorem ipsum generator */
     unsigned bench_nbSeconds = 3;   /* would be better if this value was synchronized from bench */
     size_t chunkSize = 0;
@@ -890,8 +901,6 @@ int main(int argCount, const char* argv[])
     FIO_progressSetting_e progress = FIO_ps_auto;
     zstd_operation_mode operation = zom_compress;
     ZSTD_compressionParameters compressionParams;
-    int cLevel = init_cLevel();
-    int cLevelLast = MINCLEVEL - 1;  /* lower than minimum */
     unsigned recursive = 0;
     unsigned memLimit = 0;
     FileNamesTable* filenames = UTIL_allocateFileNamesTable((size_t)argCount);  /* argCount >= 1 */
@@ -930,7 +939,7 @@ int main(int argCount, const char* argv[])
     programName = lastNameFromPath(programName);
 
     /* preset behaviors */
-    if (exeNameMatch(programName, ZSTD_ZSTDMT)) nbWorkers=0, singleThread=0;
+    if (exeNameMatch(programName, ZSTD_ZSTDMT)) nbWorkers=NBWORKERS_AUTOCPU, singleThread=0;
     if (exeNameMatch(programName, ZSTD_UNZSTD)) operation=zom_decompress;
     if (exeNameMatch(programName, ZSTD_CAT)) { operation=zom_decompress; FIO_overwriteMode(prefs); forceStdout=1; followLinks=1; FIO_setPassThroughFlag(prefs, 1); outFileName=stdoutmark; g_displayLevel=1; }     /* supports multiple formats */
     if (exeNameMatch(programName, ZSTD_ZCAT)) { operation=zom_decompress; FIO_overwriteMode(prefs); forceStdout=1; followLinks=1; FIO_setPassThroughFlag(prefs, 1); outFileName=stdoutmark; g_displayLevel=1; }    /* behave like zcat, also supports multiple formats */
@@ -938,7 +947,7 @@ int main(int argCount, const char* argv[])
         suffix = GZ_EXTENSION; cType = FIO_gzipCompression; removeSrcFile=1;
         dictCLevel = cLevel = 6;  /* gzip default is -6 */
     }
-    if (exeNameMatch(programName, ZSTD_GUNZIP)) { operation=zom_decompress; removeSrcFile=1; }                                                     /* behave like gunzip, also supports multiple formats */
+    if (exeNameMatch(programName, ZSTD_GUNZIP)) { operation=zom_decompress; removeSrcFile=1; }                              /* behave like gunzip, also supports multiple formats */
     if (exeNameMatch(programName, ZSTD_GZCAT)) { operation=zom_decompress; FIO_overwriteMode(prefs); forceStdout=1; followLinks=1; FIO_setPassThroughFlag(prefs, 1); outFileName=stdoutmark; g_displayLevel=1; }   /* behave like gzcat, also supports multiple formats */
     if (exeNameMatch(programName, ZSTD_LZMA)) { suffix = LZMA_EXTENSION; cType = FIO_lzmaCompression; removeSrcFile=1; }    /* behave like lzma */
     if (exeNameMatch(programName, ZSTD_UNLZMA)) { operation=zom_decompress; cType = FIO_lzmaCompression; removeSrcFile=1; } /* behave like unlzma, also supports multiple formats */
@@ -1081,7 +1090,7 @@ int main(int argCount, const char* argv[])
                   continue;
                 }
 #endif
-                if (longCommandWArg(&argument, "--threads")) { NEXT_INT32(nbWorkers); continue; }
+                if (longCommandWArg(&argument, "--threads")) { NEXT_UINT32(nbWorkers); continue; }
                 if (longCommandWArg(&argument, "--memlimit")) { NEXT_UINT32(memLimit); continue; }
                 if (longCommandWArg(&argument, "--memory")) { NEXT_UINT32(memLimit); continue; }
                 if (longCommandWArg(&argument, "--memlimit-decompress")) { NEXT_UINT32(memLimit); continue; }
@@ -1287,7 +1296,7 @@ int main(int argCount, const char* argv[])
                     /* nb of threads (hidden option) */
                 case 'T':
                     argument++;
-                    nbWorkers = (int)readU32FromChar(&argument);
+                    nbWorkers = readU32FromChar(&argument);
                     break;
 
                     /* Dictionary Selection level */
@@ -1332,28 +1341,17 @@ int main(int argCount, const char* argv[])
     DISPLAYLEVEL(3, WELCOME_MESSAGE);
 
 #ifdef ZSTD_MULTITHREAD
-    if ((operation==zom_decompress) && (nbWorkers > 1)) {
-        DISPLAYLEVEL(2, "Warning : decompression does not support multi-threading\n");
-    }
-    if ((nbWorkers==0) && (!singleThread)) {
-        /* automatically set # workers based on # of reported cpus */
+    if ((nbWorkers==NBWORKERS_AUTOCPU) && (!singleThread)) {
+        /* automatically set # workers based on # of reported cpu cores */
         if (defaultLogicalCores) {
-            nbWorkers = UTIL_countLogicalCores();
+            nbWorkers = (unsigned)UTIL_countLogicalCores();
             DISPLAYLEVEL(3, "Note: %d logical core(s) detected \n", nbWorkers);
         } else {
-            nbWorkers = UTIL_countPhysicalCores();
+            nbWorkers = (unsigned)UTIL_countPhysicalCores();
             DISPLAYLEVEL(3, "Note: %d physical core(s) detected \n", nbWorkers);
         }
     }
-    /* Resolve to default if nbWorkers is still unset */
-    if (nbWorkers == -1) {
-      if (operation == zom_decompress) {
-        nbWorkers = 1;
-      } else {
-        nbWorkers = default_nbThreads();
-      }
-    }
-    if (operation != zom_bench)
+    if (operation == zom_compress)
         DISPLAYLEVEL(4, "Compressing with %u worker threads \n", nbWorkers);
 #else
     (void)singleThread; (void)nbWorkers; (void)defaultLogicalCores;
