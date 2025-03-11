@@ -693,7 +693,7 @@ jobs:
       - name: Install musl-tools
         run: |
           sudo apt install -y musl-tools
-      - name: Compile the project with musl-gcc
+      - name: Compile with musl-gcc and test-zstd
         run: |
           CC=musl-gcc CFLAGS="-Werror -O3" CPPFLAGS=-DZDICT_QSORT=ZDICT_QSORT_C90 make -j -C tests test-zstd V=1
 

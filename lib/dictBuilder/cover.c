@@ -29,6 +29,8 @@
 # endif
 #endif
 
+#define __STDC_WANT_LIB_EXT1__ 1 /* request C11 Annex K, which includes qsort_s() */
+
 #include <stdio.h>  /* fprintf */
 #include <stdlib.h> /* malloc, free, qsort_r */
 
@@ -68,8 +70,9 @@
 #define ZDICT_QSORT_C90 ZDICT_QSORT_MIN
 #define ZDICT_QSORT_GNU 1
 #define ZDICT_QSORT_APPLE 2
-#define ZDICT_QSORT_MSVC ZDICT_QSORT_MAX
-#define ZDICT_QSORT_MAX 3
+#define ZDICT_QSORT_MSVC 3
+#define ZDICT_QSORT_C11 ZDICT_QSORT_MAX
+#define ZDICT_QSORT_MAX 4
 
 #ifndef ZDICT_QSORT
 # if defined(__APPLE__)
@@ -77,7 +80,9 @@
 # elif defined(_GNU_SOURCE)
 #   define ZDICT_QSORT ZDICT_QSORT_GNU /* uses qsort_r() */
 # elif defined(_WIN32) && defined(_MSC_VER)
-#   define ZDICT_QSORT ZDICT_QSORT_MSVC /* uses qsort_s() */
+#   define ZDICT_QSORT ZDICT_QSORT_MSVC /* uses qsort_s() with a different order for parameters */
+# elif defined(STDC_LIB_EXT1) && (STDC_LIB_EXT1 > 0) /* C11 Annex K */
+#   define ZDICT_QSORT ZDICT_QSORT_C11 /* uses qsort_s() */
 # else
 #   define ZDICT_QSORT ZDICT_QSORT_C90 /* uses standard qsort() which is not re-entrant (requires global variable) */
 # endif
@@ -204,7 +209,7 @@ static U32 *COVER_map_at(COVER_map_t *map, U32 key) {
  */
 static void COVER_map_remove(COVER_map_t *map, U32 key) {
   U32 i = COVER_map_index(map, key);
-  COVER_map_pair_t *del = &map->data[i];
+  COVER_map_pair_t* del = &map->data[i];
   U32 shift = 1;
   if (del->value == MAP_EMPTY_VALUE) {
     return;
@@ -307,7 +312,7 @@ static int COVER_cmp8(COVER_ctx_t *ctx, const void *lp, const void *rp) {
  */
 #if (ZDICT_QSORT == ZDICT_QSORT_MSVC) || (ZDICT_QSORT == ZDICT_QSORT_APPLE)
 static int WIN_CDECL COVER_strict_cmp(void* g_coverCtx, const void* lp, const void* rp) {
-#elif (ZDICT_QSORT == ZDICT_QSORT_GNU)
+#elif (ZDICT_QSORT == ZDICT_QSORT_GNU) || (ZDICT_QSORT == ZDICT_QSORT_C11)
 static int COVER_strict_cmp(const void *lp, const void *rp, void *g_coverCtx) {
 #else /* C90 fallback.*/
 static int COVER_strict_cmp(const void *lp, const void *rp) {
@@ -323,7 +328,7 @@ static int COVER_strict_cmp(const void *lp, const void *rp) {
  */
 #if (ZDICT_QSORT == ZDICT_QSORT_MSVC) || (ZDICT_QSORT == ZDICT_QSORT_APPLE)
 static int WIN_CDECL COVER_strict_cmp8(void* g_coverCtx, const void* lp, const void* rp) {
-#elif (ZDICT_QSORT == ZDICT_QSORT_GNU)
+#elif (ZDICT_QSORT == ZDICT_QSORT_GNU) || (ZDICT_QSORT == ZDICT_QSORT_C11)
 static int COVER_strict_cmp8(const void *lp, const void *rp, void *g_coverCtx) {
 #else /* C90 fallback.*/
 static int COVER_strict_cmp8(const void *lp, const void *rp) {
@@ -352,6 +357,10 @@ static void stableSort(COVER_ctx_t *ctx)
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
             ctx);
 #elif (ZDICT_QSORT == ZDICT_QSORT_MSVC)
+    qsort_s(ctx->suffix, ctx->suffixSize, sizeof(U32),
+            (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
+            ctx);
+#elif (ZDICT_QSORT == ZDICT_QSORT_C11)
     qsort_s(ctx->suffix, ctx->suffixSize, sizeof(U32),
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
             ctx);
