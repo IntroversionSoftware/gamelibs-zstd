@@ -364,14 +364,6 @@ static void stableSort(COVER_ctx_t *ctx)
     qsort_s(ctx->suffix, ctx->suffixSize, sizeof(U32),
             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
             ctx);
-#elif defined(__OpenBSD__)
-    /* On OpenBSD, qsort() is not guaranteed to be stable, their mergesort() is.
-     * Note(@cyan): qsort() is never guaranteed to be stable,
-     *              so why would this property only matter for OpenBSD ?
-     */
-    g_coverCtx = ctx;
-    mergesort(ctx->suffix, ctx->suffixSize, sizeof(U32),
-          (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp));
 #else /* C90 fallback.*/
     g_coverCtx = ctx;
     /* TODO(cavalcanti): implement a reentrant qsort() when _r is not available. */
