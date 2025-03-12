@@ -693,9 +693,9 @@ jobs:
       - name: Install musl-tools
         run: |
           sudo apt install -y musl-tools
-      - name: Compile the project with musl-gcc
+      - name: Compile with musl-gcc and test-zstd
         run: |
-          CC=musl-gcc CPPFLAGS=-DZSTD_USE_C90_QSORT make -j V=1 zstd
+          CC=musl-gcc CFLAGS="-Werror -O3" CPPFLAGS=-DZDICT_QSORT=ZDICT_QSORT_C90 make -j -C tests test-zstd V=1
 
   intel-cet-compatibility:
     runs-on: ubuntu-latest
