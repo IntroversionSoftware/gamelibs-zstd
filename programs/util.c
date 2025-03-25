@@ -448,6 +448,26 @@ int UTIL_isFIFOStat(const stat_t* statbuf)
     return 0;
 }
 
+/* process substitution */
+int UTIL_isFileDescriptorPipe(const char* filename)
+{
+    UTIL_TRACE_CALL("UTIL_isFileDescriptorPipe(%s)", filename);
+    /* Check if the filename is a /dev/fd/ path which indicates a file descriptor */
+    if (filename[0] == '/' && strncmp(filename, "/dev/fd/", 8) == 0) {
+        UTIL_TRACE_RET(1);
+        return 1;
+    }
+
+    /* Check for alternative process substitution formats on different systems */
+    if (filename[0] == '/' && strncmp(filename, "/proc/self/fd/", 14) == 0) {
+        UTIL_TRACE_RET(1);
+        return 1;
+    }
+
+    UTIL_TRACE_RET(0);
+    return 0; /* Not recognized as a file descriptor pipe */
+}
+
 /* UTIL_isBlockDevStat : distinguish named pipes */
 int UTIL_isBlockDevStat(const stat_t* statbuf)
 {
@@ -614,95 +634,119 @@ U64 UTIL_getTotalFileSize(const char* const * fileNamesTable, unsigned nbFiles)
 }
 
 
-/* condition : @file must be valid, and not have reached its end.
- * @return : length of line written into @buf, ended with `\0` instead of '\n',
- *           or 0, if there is no new line */
-static size_t readLineFromFile(char* buf, size_t len, FILE* file)
-{
-    assert(!feof(file));
-    if ( fgets(buf, (int) len, file) == NULL ) return 0;
-    {   size_t linelen = strlen(buf);
-        if (strlen(buf)==0) return 0;
-        if (buf[linelen-1] == '\n') linelen--;
-        buf[linelen] = '\0';
-        return linelen+1;
-    }
-}
-
-/* Conditions :
- *   size of @inputFileName file must be < @dstCapacity
- *   @dst must be initialized
- * @return : nb of lines
- *       or -1 if there's an error
- */
-static int
-readLinesFromFile(void* dst, size_t dstCapacity,
-            const char* inputFileName)
-{
-    int nbFiles = 0;
-    size_t pos = 0;
-    char* const buf = (char*)dst;
-    FILE* const inputFile = fopen(inputFileName, "r");
-
-    assert(dst != NULL);
-
-    if(!inputFile) {
-        if (g_utilDisplayLevel >= 1) perror("zstd:util:readLinesFromFile");
-        return -1;
-    }
-
-    while ( !feof(inputFile) ) {
-        size_t const lineLength = readLineFromFile(buf+pos, dstCapacity-pos, inputFile);
-        if (lineLength == 0) break;
-        assert(pos + lineLength <= dstCapacity); /* '=' for inputFile not terminated with '\n' */
-        pos += lineLength;
-        ++nbFiles;
-    }
-
-    CONTROL( fclose(inputFile) == 0 );
-
-    return nbFiles;
-}
-
 /*Note: buf is not freed in case function successfully created table because filesTable->fileNames[0] = buf*/
 FileNamesTable*
 UTIL_createFileNamesTable_fromFileName(const char* inputFileName)
 {
     size_t nbFiles = 0;
-    char* buf;
-    size_t bufSize;
-    stat_t statbuf;
+    char* buf = NULL;
+    size_t bufSize = 0;
+    size_t totalRead = 0;
+    size_t bytesRead = 0;
 
-    if (!UTIL_stat(inputFileName, &statbuf) || !UTIL_isRegularFileStat(&statbuf))
-        return NULL;
-
-    {   U64 const inputFileSize = UTIL_getFileSizeStat(&statbuf);
-        if(inputFileSize > MAX_FILE_OF_FILE_NAMES_SIZE)
+    /* Check if the input is a regular file or a file descriptor */
+    {   stat_t statbuf;
+        if (!UTIL_stat(inputFileName, &statbuf)) {
             return NULL;
-        bufSize = (size_t)(inputFileSize + 1); /* (+1) to add '\0' at the end of last filename */
-    }
-
-    buf = (char*) malloc(bufSize);
-    CONTROL( buf != NULL );
-
-    {   int const ret_nbFiles = readLinesFromFile(buf, bufSize, inputFileName);
-
-        if (ret_nbFiles <= 0) {
-          free(buf);
-          return NULL;
         }
-        nbFiles = (size_t)ret_nbFiles;
+
+        if (!UTIL_isRegularFileStat(&statbuf) &&
+            !UTIL_isFIFOStat(&statbuf) &&
+            !UTIL_isFileDescriptorPipe(inputFileName)) {
+            return NULL;
+        }
     }
 
-    {   const char** filenamesTable = (const char**) malloc(nbFiles * sizeof(*filenamesTable));
-        CONTROL(filenamesTable != NULL);
+    /* Open the input file */
+    {   FILE* const inFile = fopen(inputFileName, "rb");
+        if (inFile == NULL) return NULL;
 
-        {   size_t fnb, pos = 0;
+        /* Start with a reasonable buffer size */
+        bufSize = 64 * 1024;
+        buf = (char*)malloc(bufSize);
+        if (buf == NULL) {
+            fclose(inFile);
+            return NULL;
+        }
+
+        /* Read the file incrementally */
+        while ((bytesRead = fread(buf + totalRead, 1, bufSize - totalRead - 1, inFile)) > 0) {
+            totalRead += bytesRead;
+
+            /* If buffer is nearly full, expand it */
+            if (bufSize - totalRead < 1024) {
+                size_t newBufSize;
+                if (bufSize >= MAX_FILE_OF_FILE_NAMES_SIZE) {
+                    /* Too large, abort */
+                    free(buf);
+                    fclose(inFile);
+                    return NULL;
+                }
+
+                newBufSize = bufSize * 2;
+                if (newBufSize > MAX_FILE_OF_FILE_NAMES_SIZE)
+                    newBufSize = MAX_FILE_OF_FILE_NAMES_SIZE;
+
+                {   char* newBuf = (char*)realloc(buf, newBufSize);
+                    if (newBuf == NULL) {
+                        free(buf);
+                        fclose(inFile);
+                        return NULL;
+                    }
+
+                    buf = newBuf;
+                }
+                bufSize = newBufSize;
+            }
+        }
+
+        fclose(inFile);
+    }
+
+    /* Add null terminator to the end */
+    buf[totalRead] = '\0';
+
+    /* Count and process the lines */
+    {
+        size_t lineCount = 0;
+        size_t i = 0;
+
+        /* Convert newlines to null terminators and count lines */
+        while (i < totalRead) {
+            if (buf[i] == '\n') {
+                buf[i] = '\0';  /* Replace newlines with null terminators */
+                lineCount++;
+            }
+            i++;
+        }
+
+        /* Count the last line if it doesn't end with a newline */
+        if (totalRead > 0 && buf[totalRead-1] != '\0') {
+            lineCount++;
+        }
+
+        nbFiles = lineCount;
+    }
+
+    if (nbFiles == 0) {
+        free(buf);
+        return NULL;
+    }
+
+    /* Create the file names table */
+    {   const char** filenamesTable = (const char**)malloc(nbFiles * sizeof(*filenamesTable));
+        if (filenamesTable == NULL) {
+            free(buf);
+            return NULL;
+        }
+
+        {
+            size_t fnb, pos = 0;
             for (fnb = 0; fnb < nbFiles; fnb++) {
                 filenamesTable[fnb] = buf+pos;
                 pos += strlen(buf+pos)+1;  /* +1 for the finishing `\0` */
             }
-        assert(pos <= bufSize);
+            assert(pos <= bufSize);
         }
 
         return UTIL_assembleFileNamesTable(filenamesTable, nbFiles, buf);
