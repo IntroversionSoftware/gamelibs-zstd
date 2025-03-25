@@ -1777,10 +1777,14 @@ datagen -g1000 -P10 > tmp_patch
 zstd --patch-from=tmp_dict tmp_patch -o tmp_patch_diff
 zstd -d --patch-from=tmp_dict tmp_patch_diff -o tmp_patch_recon
 $DIFF -s tmp_patch_recon tmp_patch
+zstd -f --patch-apply=tmp_dict tmp_patch_diff -o tmp_patch_recon
+$DIFF -s tmp_patch_recon tmp_patch
 
 println "\n===> alternate syntax: patch-from origin"
 zstd -f --patch-from tmp_dict tmp_patch -o tmp_patch_diff
 zstd -df --patch-from tmp_dict tmp_patch_diff -o tmp_patch_recon
+$DIFF -s tmp_patch_recon tmp_patch
+zstd -f --patch-apply tmp_dict tmp_patch_diff -o tmp_patch_recon
 $DIFF -s tmp_patch_recon tmp_patch
 rm -rf tmp_*
 
