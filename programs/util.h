@@ -251,13 +251,13 @@ typedef struct
     size_t tableCapacity;
 } FileNamesTable;
 
-/*! UTIL_createFileNamesTable_fromFileName() :
+/*! UTIL_createFileNamesTable_fromFileList() :
  *  read filenames from @inputFileName, and store them into returned object.
  * @return : a FileNamesTable*, or NULL in case of error (ex: @inputFileName doesn't exist).
  *  Note: inputFileSize must be less than 50MB
  */
 FileNamesTable*
-UTIL_createFileNamesTable_fromFileName(const char* inputFileName);
+UTIL_createFileNamesTable_fromFileList(const char* inputFileName);
 
 /*! UTIL_assembleFileNamesTable() :
  *  This function takes ownership of its arguments, @filenames and @buf,

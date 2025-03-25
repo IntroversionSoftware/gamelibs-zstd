@@ -723,34 +723,33 @@ UTIL_createLinePointers(char* buffer, size_t numLines, size_t bufferSize)
 }
 
 FileNamesTable*
-UTIL_createFileNamesTable_fromFileName(const char* inputFileName)
+UTIL_createFileNamesTable_fromFileList(const char* fileList)
 {
     stat_t statbuf;
-    FILE* inFile = NULL;
     char* buffer = NULL;
-    const char** linePointers = NULL;
     size_t numLines = 0;
     size_t bufferSize = 0;
 
     /* Check if the input is a valid file */
-    if (!UTIL_stat(inputFileName, &statbuf)) {
+    if (!UTIL_stat(fileList, &statbuf)) {
         return NULL;
     }
 
     /* Check if the input is a supported type */
     if (!UTIL_isRegularFileStat(&statbuf) &&
         !UTIL_isFIFOStat(&statbuf) &&
-        !UTIL_isFileDescriptorPipe(inputFileName)) {
+        !UTIL_isFileDescriptorPipe(fileList)) {
         return NULL;
     }
 
     /* Open the input file */
-    inFile = fopen(inputFileName, "rb");
-    if (inFile == NULL) return NULL;
+    {   FILE* const inFile = fopen(fileList, "rb");
+        if (inFile == NULL) return NULL;
 
-    /* Read the file content */
-    buffer = UTIL_readFileContent(inFile, &bufferSize);
-    fclose(inFile);
+        /* Read the file content */
+        buffer = UTIL_readFileContent(inFile, &bufferSize);
+        fclose(inFile);
+    }
 
     if (buffer == NULL) return NULL;
 
@@ -762,14 +761,15 @@ UTIL_createFileNamesTable_fromFileName(const char* inputFileName)
     }
 
     /* Create line pointers */
-    linePointers = UTIL_createLinePointers(buffer, numLines, bufferSize);
-    if (linePointers == NULL) {
-        free(buffer);
-        return NULL;
-    }
+    {   const char** linePointers = UTIL_createLinePointers(buffer, numLines, bufferSize);
+        if (linePointers == NULL) {
+            free(buffer);
+            return NULL;
+        }
 
-    /* Create the final table */
-    return UTIL_assembleFileNamesTable(linePointers, numLines, buffer);
+        /* Create the final table */
+        return UTIL_assembleFileNamesTable(linePointers, numLines, buffer);
+    }
 }
 
 
