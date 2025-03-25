@@ -537,6 +537,10 @@ static int FIO_removeFile(const char* path)
     return remove(path);
 }
 
+/** FIO_openSrcFile() :
+ *  condition : `srcFileName` must be non-NULL.
+ *  optional: `prefs` may be NULL.
+ * @result : FILE* to `srcFileName`, or NULL if it fails */
 static FILE* FIO_openSrcFile(const FIO_prefs_t* const prefs, const char* srcFileName, stat_t* statbuf)
 {
     int allowBlockDevices = prefs != NULL ? prefs->allowBlockDevices : 0;
