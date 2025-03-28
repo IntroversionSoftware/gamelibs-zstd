@@ -630,6 +630,7 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
     }
 
     {
+        int isDstRegFile;
 #if defined(_WIN32)
         /* Windows requires opening the file as a "binary" file to avoid
          * mangling. This macro doesn't exist on unix. */
@@ -648,10 +649,11 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
         }
 #endif
 
+        /* Check regular file after opening with O_CREAT */
+        isDstRegFile = UTIL_isFdRegularFile(fd);
         if (prefs->sparseFileSupport == 1) {
             prefs->sparseFileSupport = ZSTD_SPARSE_DEFAULT;
-            /* Check regular file after opening with O_CREAT */
-            if (!UTIL_isFdRegularFile(fd)) {
+            if (!isDstRegFile) {
                 prefs->sparseFileSupport = 0;
                 DISPLAYLEVEL(4, "Sparse File Support is disabled when output is not a file \n");
             }

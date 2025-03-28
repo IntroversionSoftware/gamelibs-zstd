@@ -202,7 +202,7 @@ int UTIL_isFdRegularFile(int fd)
     stat_t statbuf;
     int ret;
     UTIL_TRACE_CALL("UTIL_isFdRegularFile(%d)", fd);
-    ret = UTIL_fstat(fd, "", &statbuf) && UTIL_isRegularFileStat(&statbuf);
+    ret = fd >= 0 && UTIL_fstat(fd, "", &statbuf) && UTIL_isRegularFileStat(&statbuf);
     UTIL_TRACE_RET(ret);
     return ret;
 }
