@@ -184,6 +184,7 @@ int UTIL_fchmod(const int fd, char const* filename, const stat_t* statbuf, mode_
  * compute the needed information.
  */
 
+int UTIL_isFdRegularFile(int fd);
 int UTIL_isRegularFile(const char* infilename);
 int UTIL_isDirectory(const char* infilename);
 int UTIL_isSameFile(const char* file1, const char* file2);

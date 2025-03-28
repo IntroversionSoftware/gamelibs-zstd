@@ -197,6 +197,16 @@ int UTIL_stat(const char* filename, stat_t* statbuf)
     return UTIL_fstat(-1, filename, statbuf);
 }
 
+int UTIL_isFdRegularFile(int fd)
+{
+    stat_t statbuf;
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isFdRegularFile(%d)", fd);
+    ret = UTIL_fstat(fd, "", &statbuf) && UTIL_isRegularFileStat(&statbuf);
+    UTIL_TRACE_RET(ret);
+    return ret;
+}
+
 int UTIL_isRegularFile(const char* infilename)
 {
     stat_t statbuf;
