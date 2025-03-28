@@ -28,7 +28,10 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: make test
-      run: make test
+      run: |
+        make test
+        make -j zstd
+        ./tests/test_process_substitution.bash ./zstd
 
   # lasts ~26mn
   make-test-macos:

@@ -1379,7 +1379,7 @@ int main(int argCount, const char* argv[])
         size_t const nbFileLists = file_of_names->tableSize;
         size_t flNb;
         for (flNb=0; flNb < nbFileLists; flNb++) {
-            FileNamesTable* const fnt = UTIL_createFileNamesTable_fromFileName(file_of_names->fileNames[flNb]);
+            FileNamesTable* const fnt = UTIL_createFileNamesTable_fromFileList(file_of_names->fileNames[flNb]);
             if (fnt==NULL) {
                 DISPLAYLEVEL(1, "zstd: error reading %s \n", file_of_names->fileNames[flNb]);
                 CLEAN_RETURN(1);

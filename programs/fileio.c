@@ -538,14 +538,16 @@ static int FIO_removeFile(const char* path)
 }
 
 /** FIO_openSrcFile() :
- *  condition : `srcFileName` must be non-NULL. `prefs` may be NULL.
+ *  condition : `srcFileName` must be non-NULL.
+ *  optional: `prefs` may be NULL.
  * @result : FILE* to `srcFileName`, or NULL if it fails */
 static FILE* FIO_openSrcFile(const FIO_prefs_t* const prefs, const char* srcFileName, stat_t* statbuf)
 {
     int allowBlockDevices = prefs != NULL ? prefs->allowBlockDevices : 0;
     assert(srcFileName != NULL);
     assert(statbuf != NULL);
-    if (!strcmp (srcFileName, stdinmark)) {
+
+    if (!strcmp(srcFileName, stdinmark)) {
         DISPLAYLEVEL(4,"Using stdin for input \n");
         SET_BINARY_MODE(stdin);
         return stdin;
@@ -557,8 +559,10 @@ static FILE* FIO_openSrcFile(const FIO_prefs_t* const prefs, const char* srcFile
         return NULL;
     }
 
+    /* Accept regular files, FIFOs, and process substitution file descriptors */
     if (!UTIL_isRegularFileStat(statbuf)
      && !UTIL_isFIFOStat(statbuf)
+     && !UTIL_isFileDescriptorPipe(srcFileName)  /* Process substitution support */
      && !(allowBlockDevices && UTIL_isBlockDevStat(statbuf))
     ) {
         DISPLAYLEVEL(1, "zstd: %s is not a regular file -- ignored \n",
@@ -655,7 +659,11 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
         }
 #endif
         if (f == NULL) {
-            DISPLAYLEVEL(1, "zstd: %s: %s\n", dstFileName, strerror(errno));
+            if (UTIL_isFileDescriptorPipe(dstFileName)) {
+                DISPLAYLEVEL(1, "zstd: error: no output specified (use -o or -c). \n");
+            } else {
+                DISPLAYLEVEL(1, "zstd: %s: %s\n", dstFileName, strerror(errno));
+            }
         } else {
             /* An increased buffer size can provide a significant performance
              * boost on some platforms. Note that providing a NULL buf with a
