@@ -585,8 +585,6 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
                 const char* srcFileName, const char* dstFileName,
                 const int mode)
 {
-    int isDstRegFile;
-
     if (prefs->testMode) return NULL;  /* do not open file in test mode */
 
     assert(dstFileName != NULL);
@@ -606,16 +604,7 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
         return NULL;
     }
 
-    isDstRegFile = UTIL_isRegularFile(dstFileName);  /* invoke once */
-    if (prefs->sparseFileSupport == 1) {
-        prefs->sparseFileSupport = ZSTD_SPARSE_DEFAULT;
-        if (!isDstRegFile) {
-            prefs->sparseFileSupport = 0;
-            DISPLAYLEVEL(4, "Sparse File Support is disabled when output is not a file \n");
-        }
-    }
-
-    if (isDstRegFile) {
+    if (UTIL_isRegularFile(dstFileName)) {
         /* Check if destination file already exists */
 #if !defined(_WIN32)
         /* this test does not work on Windows :
@@ -641,6 +630,7 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
     }
 
     {
+        int isDstRegFile;
 #if defined(_WIN32)
         /* Windows requires opening the file as a "binary" file to avoid
          * mangling. This macro doesn't exist on unix. */
@@ -658,6 +648,17 @@ FIO_openDstFile(FIO_ctx_t* fCtx, FIO_prefs_t* const prefs,
             f = fdopen(fd, "wb");
         }
 #endif
+
+        /* Check regular file after opening with O_CREAT */
+        isDstRegFile = UTIL_isFdRegularFile(fd);
+        if (prefs->sparseFileSupport == 1) {
+            prefs->sparseFileSupport = ZSTD_SPARSE_DEFAULT;
+            if (!isDstRegFile) {
+                prefs->sparseFileSupport = 0;
+                DISPLAYLEVEL(4, "Sparse File Support is disabled when output is not a file \n");
+            }
+        }
+
         if (f == NULL) {
             if (UTIL_isFileDescriptorPipe(dstFileName)) {
                 DISPLAYLEVEL(1, "zstd: error: no output specified (use -o or -c). \n");
