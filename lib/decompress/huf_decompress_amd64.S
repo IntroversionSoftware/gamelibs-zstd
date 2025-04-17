@@ -38,6 +38,16 @@
 
 #endif
 
+// There appears to be an unreconcilable syntax difference between Linux and Darwin assemblers.
+// Name of a private label (i.e. not exported to symbol table) on Darwin has to start with "L",
+// on Linux has to start with ".". There's no way to have a name start with both "." and "L", so
+// we have to use a macro.
+#if defined(__APPLE__)
+#define LOCAL_LABEL(label) L_ ## label
+#else
+#define LOCAL_LABEL(label) .L_ ## label
+#endif
+
 #if ZSTD_ENABLE_ASM_X86_64_BMI2
 
 /* Calling convention:
@@ -198,7 +208,7 @@ HUF_decompress4X1_usingDTable_internal_fast_asm_loop:
     subq $24, %rsp
     .cfi_def_cfa_offset 184
 
-.L_4X1_compute_olimit:
+LOCAL_LABEL(4X1_compute_olimit):
     /* Computes how many iterations we can do safely
      * %r15, %rax may be clobbered
      * rbx, rdx must be saved
@@ -245,19 +255,19 @@ HUF_decompress4X1_usingDTable_internal_fast_asm_loop:
     /* If (op3 + 20 > olimit) */
     movq %op3, %rax    /* rax = op3 */
     cmpq %rax, %olimit /* op3 == olimit */
-    je .L_4X1_exit
+    je LOCAL_LABEL(4X1_exit)
 
     /* If (ip1 < ip0) go to exit */
     cmpq %ip0, %ip1
-    jb .L_4X1_exit
+    jb LOCAL_LABEL(4X1_exit)
 
     /* If (ip2 < ip1) go to exit */
     cmpq %ip1, %ip2
-    jb .L_4X1_exit
+    jb LOCAL_LABEL(4X1_exit)
 
     /* If (ip3 < ip2) go to exit */
     cmpq %ip2, %ip3
-    jb .L_4X1_exit
+    jb LOCAL_LABEL(4X1_exit)
 
 /* Reads top 11 bits from bits[n]
  * Loads dt[bits[n]] into var[n]
@@ -318,7 +328,7 @@ HUF_decompress4X1_usingDTable_internal_fast_asm_loop:
 
     .p2align 6
 
-.L_4X1_loop_body:
+LOCAL_LABEL(4X1_loop_body):
     /* Decode 5 symbols in each of the 4 streams (20 total)
      * Must have called GET_NEXT_DELT for each stream
      */
@@ -356,7 +366,7 @@ HUF_decompress4X1_usingDTable_internal_fast_asm_loop:
 
     /* If op3 < olimit: continue the loop */
     cmp %op3, 24(%rsp)
-    ja .L_4X1_loop_body
+    ja LOCAL_LABEL(4X1_loop_body)
 
     /* Reload ip[1,2,3] from stack */
     movq 0(%rsp), %ip1
@@ -364,13 +374,13 @@ HUF_decompress4X1_usingDTable_internal_fast_asm_loop:
     movq 16(%rsp), %ip3
 
     /* Re-compute olimit */
-    jmp .L_4X1_compute_olimit
+    jmp LOCAL_LABEL(4X1_compute_olimit)
 
 #undef GET_NEXT_DELT
 #undef DECODE_FROM_DELT
 #undef DECODE
 #undef RELOAD_BITS
-.L_4X1_exit:
+LOCAL_LABEL(4X1_exit):
     addq $24, %rsp
     .cfi_def_cfa_offset 160
 
@@ -546,7 +556,7 @@ HUF_decompress4X2_usingDTable_internal_fast_asm_loop:
     subq $8, %rsp
     .cfi_def_cfa_offset 192
 
-.L_4X2_compute_olimit:
+LOCAL_LABEL(4X2_compute_olimit):
     /* Computes how many iterations we can do safely
      * %r15, %rax may be clobbered
      * rdx must be saved
@@ -610,19 +620,19 @@ HUF_decompress4X2_usingDTable_internal_fast_asm_loop:
     /* If (op3 + 10 > olimit) */
     movq %op3, %rax    /* rax = op3 */
     cmpq %rax, %olimit /* op3 == olimit */
-    je .L_4X2_exit
+    je LOCAL_LABEL(4X2_exit)
 
     /* If (ip1 < ip0) go to exit */
     cmpq %ip0, %ip1
-    jb .L_4X2_exit
+    jb LOCAL_LABEL(4X2_exit)
 
     /* If (ip2 < ip1) go to exit */
     cmpq %ip1, %ip2
-    jb .L_4X2_exit
+    jb LOCAL_LABEL(4X2_exit)
 
     /* If (ip3 < ip2) go to exit */
     cmpq %ip2, %ip3
-    jb .L_4X2_exit
+    jb LOCAL_LABEL(4X2_exit)
 
 #define DECODE(n, idx)              \
     movq %bits##n, %rax;            \
@@ -649,7 +659,7 @@ HUF_decompress4X2_usingDTable_internal_fast_asm_loop:
 
     .p2align 6
 
-.L_4X2_loop_body:
+LOCAL_LABEL(4X2_loop_body):
     /* We clobber r8, so store it on the stack */
     movq %r8, 0(%rsp)
 
@@ -666,12 +676,12 @@ HUF_decompress4X2_usingDTable_internal_fast_asm_loop:
     FOR_EACH_STREAM(RELOAD_BITS)
 
     cmp %op3, 48(%rsp)
-    ja .L_4X2_loop_body
-    jmp .L_4X2_compute_olimit
+    ja LOCAL_LABEL(4X2_loop_body)
+    jmp LOCAL_LABEL(4X2_compute_olimit)
 
 #undef DECODE
 #undef RELOAD_BITS
-.L_4X2_exit:
+LOCAL_LABEL(4X2_exit):
     addq $8, %rsp
     .cfi_def_cfa_offset 184
     /* Restore stack (oend & olimit) */
