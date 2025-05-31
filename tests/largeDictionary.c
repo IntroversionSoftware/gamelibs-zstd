@@ -72,35 +72,59 @@ int main(int argc, const char** argv)
     void* roundtrip = malloc(dataSize);
     (void)argc;
     (void)argv;
+    int _exit_code = 0;
 
     if (!buffer || !out || !roundtrip || !cctx || !dctx) {
         fprintf(stderr, "Allocation failure\n");
-        return 1;
+        _exit_code = 1;
+        goto _cleanup;
     }
 
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, 31)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers, 1)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_overlapLog, 9)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 1)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_strategy, ZSTD_btopt)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_targetLength, 7)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_minMatch, 7)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_searchLog, 1)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_hashLog, 10)))
-        return 1;
-    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_chainLog, 10)))
-        return 1;
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, 31))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers, 1))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_overlapLog, 9))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 1))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_strategy, ZSTD_btopt))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_targetLength, 7))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_minMatch, 7))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_searchLog, 1))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_hashLog, 10))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
+    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_chainLog, 10))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
 
-    if (ZSTD_isError(ZSTD_DCtx_setParameter(dctx, ZSTD_d_windowLogMax, 31)))
-        return 1;
+    if (ZSTD_isError(ZSTD_DCtx_setParameter(dctx, ZSTD_d_windowLogMax, 31))) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
 
     RDG_genBuffer(buffer, bufferSize, 1.0, 0.0, 0xbeefcafe);
 
@@ -109,20 +133,25 @@ int main(int argc, const char** argv)
         int i;
         for (i = 0; i < 10; ++i) {
             fprintf(stderr, "Compressing 1 GB\n");
-            if (compress(cctx, dctx, out, outSize, buffer, dataSize, roundtrip, ZSTD_e_continue))
-                return 1;
+            if (compress(cctx, dctx, out, outSize, buffer, dataSize, roundtrip, ZSTD_e_continue)) {
+                _exit_code = 1;
+                goto _cleanup;
+            }
         }
     }
     fprintf(stderr, "Compressing 1 GB\n");
-    if (compress(cctx, dctx, out, outSize, buffer, dataSize, roundtrip, ZSTD_e_end))
-        return 1;
+    if (compress(cctx, dctx, out, outSize, buffer, dataSize, roundtrip, ZSTD_e_end)) {
+        _exit_code = 1;
+        goto _cleanup;
+    }
 
     fprintf(stderr, "Success!\n");
 
+_cleanup:
     free(roundtrip);
     free(out);
     free(buffer);
     ZSTD_freeDCtx(dctx);
     ZSTD_freeCCtx(cctx);
-    return 0;
+    return _exit_code;
 }
