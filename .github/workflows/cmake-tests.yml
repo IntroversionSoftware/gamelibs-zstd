@@ -1,5 +1,7 @@
 name: cmake-tests
 # CMake-specific build and test workflows
+# This workflow validates zstd builds across different CMake configurations,
+# platforms, and edge cases to ensure broad compatibility.
 
 concurrency:
   group: cmake-${{ github.ref }}
@@ -11,27 +13,48 @@ on:
 
 permissions: read-all
 
+env:
+  # Centralized test timeouts for consistency
+  QUICK_TEST_TIME: "30s"
+  STANDARD_TEST_TIME: "1mn"
+  # Common CMake flags
+  COMMON_CMAKE_FLAGS: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
+
 jobs:
-  cmake-build-and-test-check:
+  # Ubuntu-based cmake build using make wrapper
+  # This test uses the make-driven cmake build to ensure compatibility
+  # with the existing build system integration
+  cmake-ubuntu-basic:
+    name: "CMake Ubuntu Basic Build"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-    - name: cmake build and test
+    - name: Install dependencies
       run: |
-        sudo apt install liblzma-dev
-        FUZZERTEST=-T1mn ZSTREAM_TESTTIME=-T1mn make cmakebuild V=1
+        sudo apt install liblzma-dev  # Required for compression algorithms
+    - name: CMake build and test via make
+      run: |
+        # Use make wrapper for cmake build with quick test timeouts
+        FUZZERTEST=-T${{ env.STANDARD_TEST_TIME }} ZSTREAM_TESTTIME=-T${{ env.STANDARD_TEST_TIME }} make cmakebuild V=1
 
-  cmake-source-directory-with-spaces:
+  # Cross-platform cmake build with edge case: source paths containing spaces
+  # This test ensures cmake handles filesystem paths with spaces correctly
+  # across different operating systems and build generators
+  cmake-cross-platform-spaces:
+    name: "CMake Cross-Platform (Spaces in Path)"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             generator: "Unix Makefiles"
+            name: "Linux"
           - os: windows-latest
             generator: "NMake Makefiles"
+            name: "Windows NMake"
           - os: macos-latest
             generator: "Unix Makefiles"
+            name: "macOS"
     env:
       SRC_DIR: "source directory with spaces"
     steps:
@@ -40,35 +63,47 @@ jobs:
         path: "${{ env.SRC_DIR }}"
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       if: ${{ matrix.generator == 'NMake Makefiles' }}
-    - name: cmake build on a source directory with spaces
+    - name: "CMake build and install (${{ matrix.name }})"
       run: |
+        # Test Release build with installation to verify packaging
         cmake -S "${{ env.SRC_DIR }}/build/cmake" -B build -DBUILD_TESTING=ON -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=Release --install-prefix "${{ runner.temp }}/install"
         cmake --build build --config Release
         cmake --install build --config Release
 
-  cmake-visual-2022:
+  # Windows-specific cmake testing with Visual Studio 2022
+  # Tests multiple generators and toolchains to ensure broad Windows compatibility
+  # including MSVC, MinGW, and Clang-CL with various architectures and optimizations
+  cmake-windows-comprehensive:
+    name: "CMake Windows VS2022 (${{ matrix.name }})"
+    runs-on: windows-2022
     strategy:
       matrix:
         include:
           - generator: "Visual Studio 17 2022"
             flags: "-A x64"
+            name: "MSVC x64"
           - generator: "Visual Studio 17 2022"
             flags: "-A Win32"
+            name: "MSVC Win32"
           - generator: "MinGW Makefiles"
+            flags: ""
+            name: "MinGW"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL"
+            name: "Clang-CL"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL -A x64 -DCMAKE_C_FLAGS=/arch:AVX2"
-    runs-on: windows-2022
+            name: "Clang-CL AVX2"
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # tag=v2.0.0
-    - name: Build & Test
+    - name: "Build & Test (${{ matrix.name }})"
       run: |
+        # Configure and build in Debug mode with comprehensive testing
         cd build\cmake
         mkdir build
         cd build
-        cmake.exe -G "${{matrix.generator}}" ${{matrix.flags}} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS:BOOL=ON -DZSTD_ZSTREAM_FLAGS=-T30s -DZSTD_FUZZER_FLAGS=-T30s -DZSTD_FULLBENCH_FLAGS=-i0 ..
+        cmake.exe -G "${{matrix.generator}}" ${{matrix.flags}} -DCMAKE_BUILD_TYPE=Debug ${{ env.COMMON_CMAKE_FLAGS }} -DZSTD_ZSTREAM_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FUZZER_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FULLBENCH_FLAGS=-i0 ..
         cmake.exe --build .
         ctest.exe -V -C Debug
