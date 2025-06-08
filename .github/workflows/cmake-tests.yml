@@ -83,10 +83,18 @@ jobs:
             flags: "-A x64"
             name: "MSVC x64"
             runner: "windows-2022"
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
           - generator: "Visual Studio 17 2022"
             flags: "-A Win32"
             name: "MSVC Win32"
             runner: "windows-2022"
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
+          - generator: "Visual Studio 17 2022"
+            flags: "-A x64"
+            name: "MSVC x64 (No ZSTD_BUILD_TESTS)"
+            runner: "windows-2022"
+            # Intentionally omit ZSTD_BUILD_TESTS to reproduce the CXX language configuration bug
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
           # - generator: "Visual Studio 17 2022"
           #   flags: "-A ARM64"
           #   name: "MSVC ARM64"
@@ -95,26 +103,34 @@ jobs:
             flags: ""
             name: "MinGW"
             runner: "windows-2022"
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL"
             name: "Clang-CL"
             runner: "windows-2022"
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL -A x64 -DCMAKE_C_FLAGS=/arch:AVX2"
             name: "Clang-CL AVX2"
             runner: "windows-2022"
+            cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS=ON"
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # tag=v2.0.0
-    - name: "Build & Test (${{ matrix.name }})"
+    - name: "Configure CMake (${{ matrix.name }})"
       run: |
-        # Configure and build in Debug mode with comprehensive testing
         cd build\cmake
         mkdir build
         cd build
-        cmake.exe -G "${{matrix.generator}}" ${{matrix.flags}} -DCMAKE_BUILD_TYPE=Debug ${{ env.COMMON_CMAKE_FLAGS }} -DZSTD_ZSTREAM_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FUZZER_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FULLBENCH_FLAGS=-i0 ..
+        cmake.exe -G "${{matrix.generator}}" ${{matrix.flags}} -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_extra_flags }} -DZSTD_ZSTREAM_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FUZZER_FLAGS=-T${{ env.QUICK_TEST_TIME }} -DZSTD_FULLBENCH_FLAGS=-i0 ..
+    - name: "Build (${{ matrix.name }})"
+      run: |
+        cd build\cmake\build
         cmake.exe --build .
+    - name: "Test (${{ matrix.name }})"
+      run: |
+        cd build\cmake\build
         ctest.exe -V -C Debug
 
   # macOS ARM64 (Apple Silicon) specific cmake testing
