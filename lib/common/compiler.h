@@ -218,6 +218,9 @@
 #  if defined(__ARM_NEON) || defined(_M_ARM64)
 #    define ZSTD_ARCH_ARM_NEON
 #  endif
+# if defined(__riscv) && defined(__riscv_vector)
+#   define ZSTD_ARCH_RISCV_RVV
+# endif
 #
 #  if defined(ZSTD_ARCH_X86_AVX2)
 #    include <immintrin.h>
@@ -226,6 +229,9 @@
 #    include <emmintrin.h>
 #  elif defined(ZSTD_ARCH_ARM_NEON)
 #    include <arm_neon.h>
+#  endif
+#  if defined(ZSTD_ARCH_RISCV_RVV)
+#    include <riscv_vector.h>
 #  endif
 #endif
 
