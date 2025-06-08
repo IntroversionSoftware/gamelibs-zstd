@@ -1,0 +1,74 @@
+name: cmake-tests
+# CMake-specific build and test workflows
+
+concurrency:
+  group: cmake-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ dev, release, actionsTest ]
+
+permissions: read-all
+
+jobs:
+  cmake-build-and-test-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: cmake build and test
+      run: |
+        sudo apt install liblzma-dev
+        FUZZERTEST=-T1mn ZSTREAM_TESTTIME=-T1mn make cmakebuild V=1
+
+  cmake-source-directory-with-spaces:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            generator: "Unix Makefiles"
+          - os: windows-latest
+            generator: "NMake Makefiles"
+          - os: macos-latest
+            generator: "Unix Makefiles"
+    env:
+      SRC_DIR: "source directory with spaces"
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+      with:
+        path: "${{ env.SRC_DIR }}"
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      if: ${{ matrix.generator == 'NMake Makefiles' }}
+    - name: cmake build on a source directory with spaces
+      run: |
+        cmake -S "${{ env.SRC_DIR }}/build/cmake" -B build -DBUILD_TESTING=ON -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=Release --install-prefix "${{ runner.temp }}/install"
+        cmake --build build --config Release
+        cmake --install build --config Release
+
+  cmake-visual-2022:
+    strategy:
+      matrix:
+        include:
+          - generator: "Visual Studio 17 2022"
+            flags: "-A x64"
+          - generator: "Visual Studio 17 2022"
+            flags: "-A Win32"
+          - generator: "MinGW Makefiles"
+          - generator: "Visual Studio 17 2022"
+            flags: "-T ClangCL"
+          - generator: "Visual Studio 17 2022"
+            flags: "-T ClangCL -A x64 -DCMAKE_C_FLAGS=/arch:AVX2"
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # tag=v2.0.0
+    - name: Build & Test
+      run: |
+        cd build\cmake
+        mkdir build
+        cd build
+        cmake.exe -G "${{matrix.generator}}" ${{matrix.flags}} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_COMPILE_WARNING_AS_ERROR=ON -DZSTD_BUILD_TESTS:BOOL=ON -DZSTD_ZSTREAM_FLAGS=-T30s -DZSTD_FUZZER_FLAGS=-T30s -DZSTD_FULLBENCH_FLAGS=-i0 ..
+        cmake.exe --build .
+        ctest.exe -V -C Debug
