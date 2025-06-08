@@ -72,28 +72,37 @@ jobs:
 
   # Windows-specific cmake testing with Visual Studio 2022
   # Tests multiple generators and toolchains to ensure broad Windows compatibility
-  # including MSVC, MinGW, and Clang-CL with various architectures and optimizations
+  # including MSVC (x64, Win32, ARM64), MinGW, and Clang-CL with various architectures and optimizations
   cmake-windows-comprehensive:
     name: "CMake Windows VS2022 (${{ matrix.name }})"
-    runs-on: windows-2022
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
           - generator: "Visual Studio 17 2022"
             flags: "-A x64"
             name: "MSVC x64"
+            runner: "windows-2022"
           - generator: "Visual Studio 17 2022"
             flags: "-A Win32"
             name: "MSVC Win32"
+            runner: "windows-2022"
+          - generator: "Visual Studio 17 2022"
+            flags: "-A ARM64"
+            name: "MSVC ARM64"
+            runner: "windows-2022-arm64"
           - generator: "MinGW Makefiles"
             flags: ""
             name: "MinGW"
+            runner: "windows-2022"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL"
             name: "Clang-CL"
+            runner: "windows-2022"
           - generator: "Visual Studio 17 2022"
             flags: "-T ClangCL -A x64 -DCMAKE_C_FLAGS=/arch:AVX2"
             name: "Clang-CL AVX2"
+            runner: "windows-2022"
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: Add MSBuild to PATH
