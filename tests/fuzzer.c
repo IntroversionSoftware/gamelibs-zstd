@@ -44,6 +44,13 @@
 /* must be included after util.h, due to ERROR macro redefinition issue on Visual Studio */
 #include "zstd_internal.h" /* ZSTD_WORKSPACETOOLARGE_MAXDURATION, ZSTD_WORKSPACETOOLARGE_FACTOR, KB, MB */
 #include "threading.h"    /* ZSTD_pthread_create, ZSTD_pthread_join */
+#include "compress/hist.h" /* HIST_count_wksp */
+
+
+/*-************************************
+*  Macros
+**************************************/
+#define COUNTOF(array)    (sizeof(array) / sizeof(*(array)))
 
 
 /*-************************************
@@ -567,6 +574,123 @@ static void test_decompressBound(unsigned tnb)
     DISPLAYLEVEL(3, "OK \n");
 }
 
+static unsigned test_histCountWksp(unsigned seed, unsigned testNb)
+{
+    static const unsigned symLowLimits[] =  {   0,  27,   0,   0,  27,  42,   0,   0, 27, 42, 27, 42 };
+    static const unsigned symHighLimits[] = { 255, 255, 210, 110,  42,  42, 210, 110, 42, 42, 42, 42 };
+    static const unsigned symMaxLimits[] =  { 255, 255, 255, 255, 255, 255, 230, 130, 99, 99, 42, 42 };
+    static const size_t inputSizes[] = { 3367, 1761, 893, 117 };
+    unsigned workspace[HIST_WKSP_SIZE_U32];
+    size_t res, i, is, il;
+
+    DISPLAYLEVEL(3, "test%3u : HIST_count_wksp with empty source : ", testNb++);
+    {
+        /* With NULL source UBSan of older Clang could fail: applying zero offset to null pointer. */
+        static const unsigned char source[4] = { 0 };
+        unsigned count[1] = { 0 };
+        unsigned maxSym = 0;
+        res = HIST_count_wksp(count, &maxSym, source, 0, workspace, sizeof(workspace));
+        CHECK_EQ(res, 0);
+        CHECK_EQ(maxSym, 0);
+        CHECK_EQ(count[0], 0);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+#if HIST_WKSP_SIZE_U32
+    DISPLAYLEVEL(3, "test%3u : HIST_count_wksp with small workspace : ", testNb++);
+    {
+        unsigned count[1] = { 0 };
+        unsigned maxSym = 0;
+        res = HIST_count_wksp(count, &maxSym, NULL, 0, workspace, sizeof(workspace) - 1);
+        CHECK_EQ(res, ERROR(workSpace_tooSmall));
+        CHECK_EQ(maxSym, 0);
+        CHECK_EQ(count[0], 0);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : HIST_count_wksp with wrong workspace alignment : ", testNb++);
+    {
+        unsigned count[1] = { 0 };
+        unsigned maxSym = 0;
+        res = HIST_count_wksp(count, &maxSym, NULL, 0, (unsigned*)(void*)((char*)workspace + 1), sizeof(workspace));
+        CHECK_EQ(res, ERROR(GENERIC));
+        CHECK_EQ(maxSym, 0);
+        CHECK_EQ(count[0], 0);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+#endif
+
+    DISPLAYLEVEL(3, "test%3u : HIST_count_wksp with symbol out of range, small size : ", testNb++);
+    {
+        /* For less elements HIST_count_parallel_wksp would fail. */
+        static const unsigned char source[4] = { 1, 4, 0, 2 };
+        static const unsigned expected[6] = { 0 };
+        unsigned count[6] = { 0 };
+        unsigned maxSym = 2;
+        res = HIST_count_wksp(count, &maxSym, source, sizeof(source), workspace, sizeof(workspace));
+        CHECK_EQ(res, ERROR(maxSymbolValue_tooSmall));
+        CHECK_EQ(maxSym, 2);
+        for (i = 0; i < COUNTOF(expected); ++i) CHECK_EQ(count[i], expected[i]);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : HIST_count_wksp with symbol out of range, medium size : ", testNb++);
+    {
+        unsigned char source[3407];
+        unsigned count[6] = { 0 };
+        unsigned maxSym = 2;
+        for (i = 0; i < COUNTOF(source); ++i) {
+            source[i] = (48271 * (i + 1)) & 3;
+        }
+        res = HIST_count_wksp(count, &maxSym, source, sizeof(source), workspace, sizeof(workspace));
+        CHECK_EQ(res, ERROR(maxSymbolValue_tooSmall));
+        CHECK_EQ(maxSym, 2);
+        for (i = 0; i < COUNTOF(count); ++i) CHECK_EQ(count[i], 0);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    for (il = 0; il < COUNTOF(symMaxLimits); ++il) {
+        unsigned symMax = symMaxLimits[il];
+        unsigned symLow = symLowLimits[il];
+        unsigned symHigh = symHighLimits[il];
+        unsigned symRange = symHigh - symLow + 1;
+
+        for (is = 0; is < COUNTOF(inputSizes); ++is) {
+            unsigned char source[4000];
+            size_t inputSize = inputSizes[is];
+            assert(inputSize <= sizeof(source));
+            DISPLAYLEVEL(3, "test%3u : HIST_count_wksp test in [%u..%u], symMax: %u, inputSize: %u : ",
+                         testNb++, symLow, symHigh, symMax, (unsigned)inputSize);
+            {
+                unsigned count[260] = { 0 };
+                unsigned expected[COUNTOF(count)] = { 0 };
+                unsigned maxSym = symMax;
+                unsigned realMaxSym = symMax;
+                unsigned maxCount = 0;
+                for (i = 0; i < inputSize; ++i) {
+                    unsigned prng = (48271 * (i + seed)) % symRange + symLow;
+                    source[i] = (unsigned char)prng;
+                    ++expected[prng];
+                }
+                /* for basic buffer overwrite checks */
+                for (i = maxSym + 1; i < COUNTOF(count); ++i) expected[i] = count[i] = ~0u;
+                for (i = 0; i <= maxSym; ++i) maxCount = MAX(maxCount, expected[i]);
+                for (i = realMaxSym; i > 0; --i) {
+                    if (expected[i]) break;
+                    --realMaxSym;
+                }
+                res = HIST_count_wksp(count, &maxSym, source, inputSize, workspace, sizeof(workspace));
+                CHECK_EQ(res, maxCount);
+                CHECK_EQ(maxSym, realMaxSym);
+                for (i = 0; i < COUNTOF(expected); ++i) CHECK_EQ(count[i], expected[i]);
+            }
+            DISPLAYLEVEL(3, "OK \n");
+        }
+    }
+
+    return testNb;
+}
+
 static void test_setCParams(unsigned tnb)
 {
     ZSTD_CCtx* const cctx = ZSTD_createCCtx();
@@ -711,6 +835,8 @@ static int basicUnitTests(U32 const seed, double compressibility)
         if (params.chainLog != 17) goto _output_error;
     }
     DISPLAYLEVEL(3, "OK \n");
+
+    testNb = test_histCountWksp(seed, testNb);
 
     DISPLAYLEVEL(3, "test%3u : compress %u bytes : ", testNb++, (unsigned)CNBuffSize);
     {   ZSTD_CCtx* const cctx = ZSTD_createCCtx();
