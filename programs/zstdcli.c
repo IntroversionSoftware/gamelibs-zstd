@@ -147,7 +147,7 @@ static void usage(FILE* f, const char* programName)
     DISPLAY_F(f, "Options:\n");
     DISPLAY_F(f, "  -o OUTPUT                     Write output to a single file, OUTPUT.\n");
     DISPLAY_F(f, "  -k, --keep                    Preserve INPUT file(s). [Default] \n");
-    DISPLAY_F(f, "  --rm                          Remove INPUT file(s) after successful (de)compression.\n");
+    DISPLAY_F(f, "  --rm                          Remove INPUT file(s) after successful (de)compression to file.\n");
 #ifdef ZSTD_GZCOMPRESS
     if (exeNameMatch(programName, ZSTD_GZ)) {     /* behave like gzip */
         DISPLAY_F(f, "  -n, --no-name                 Do not store original filename when compressing.\n\n");

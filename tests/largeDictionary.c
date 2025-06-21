@@ -73,6 +73,7 @@ int main(int argc, const char** argv)
     int _exit_code = 1;
     (void)argc;
     (void)argv;
+    int _exit_code = 0;
 
     if (!buffer || !out || !roundtrip || !cctx || !dctx) {
         fprintf(stderr, "Allocation failure\n");
@@ -126,5 +127,6 @@ cleanup:
     free(buffer);
     ZSTD_freeDCtx(dctx);
     ZSTD_freeCCtx(cctx);
+    return _exit_code;
     return _exit_code;
 }
