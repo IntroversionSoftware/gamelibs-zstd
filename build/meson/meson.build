@@ -65,7 +65,6 @@ zstd_docdir = join_paths(zstd_datadir, 'doc', meson.project_name())
 
 # Built-in options
 use_debug = get_option('debug')
-buildtype = get_option('buildtype')
 default_library_type = get_option('default_library')
 
 # Custom options
