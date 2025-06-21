@@ -1,5 +1,5 @@
 name: dev-long-tests
-# Tests longer than 10mn
+# Tests generally longer than 10mn
 
 concurrency:
   group: long-${{ github.ref }}
@@ -12,6 +12,7 @@ on:
 permissions: read-all
 
 jobs:
+  # lasts ~7mn
   make-all:
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +20,7 @@ jobs:
     - name: make all
       run: make all
 
-  # lasts ~24mn
+  # lasts ~19mn
   make-test:
     runs-on: ubuntu-latest
     env:
@@ -33,7 +34,7 @@ jobs:
         make -j zstd
         ./tests/test_process_substitution.bash ./zstd
 
-  # lasts ~26mn
+  # lasts ~16mn
   make-test-macos:
     runs-on: macos-latest
     steps:
@@ -41,7 +42,7 @@ jobs:
     - name: make test on macos
       run: make test
 
-  # lasts ~24mn
+  # lasts ~10mn
   make-test-32bit:
     runs-on: ubuntu-latest
     env:
@@ -56,6 +57,7 @@ jobs:
         make clean
         CFLAGS="-m32 -O2" make -j test V=1
 
+  # lasts ~7mn
   test-largeDictionary:
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +66,7 @@ jobs:
       run: |
         CFLAGS="-Werror -O3" make -j -C tests test-largeDictionary
 
+  # lasts ~9mn
   no-intrinsics-fuzztest:
     runs-on: ubuntu-latest
     steps:
@@ -71,6 +74,7 @@ jobs:
     - name: no intrinsics fuzztest
       run: MOREFLAGS="-DZSTD_NO_INTRINSICS" make -C tests fuzztest
 
+  # lasts ~8mn
   tsan-zstreamtest:
     runs-on: ubuntu-latest
     steps:
@@ -85,14 +89,13 @@ jobs:
     - name: ub + address sanitizer on zstreamtest
       run: CC=clang make uasan-test-zstream
 
-  # lasts ~15mn
+  # lasts ~11mn
   tsan-fuzztest:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
     - name: thread sanitizer fuzztest
       run: CC=clang make tsan-fuzztest
-
 
   big-tests-zstreamtest32:
     runs-on: ubuntu-latest
@@ -104,7 +107,7 @@ jobs:
         make libc6install
         CC=clang make -C tests test-zstream32 FUZZER_FLAGS="--big-tests"
 
-  # lasts ~23mn
+  # lasts ~13mn
   gcc-8-asan-ubsan-testzstd:
     runs-on: ubuntu-latest
     steps:
