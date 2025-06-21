@@ -56,6 +56,14 @@ jobs:
         make clean
         CFLAGS="-m32 -O2" make -j test V=1
 
+  test-largeDictionary:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
+    - name: largeDictionary
+      run: |
+        CFLAGS="-Werror -O3" make -j -C tests test-largeDictionary
+
   no-intrinsics-fuzztest:
     runs-on: ubuntu-latest
     steps:
