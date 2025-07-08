@@ -45,6 +45,7 @@
 #include "zstd_internal.h" /* ZSTD_WORKSPACETOOLARGE_MAXDURATION, ZSTD_WORKSPACETOOLARGE_FACTOR, KB, MB */
 #include "threading.h"    /* ZSTD_pthread_create, ZSTD_pthread_join */
 #include "compress/hist.h" /* HIST_count_wksp */
+#include "compress/zstd_compress_internal.h" /* ZSTD_get1BlockSummary */
 
 
 /*-************************************
@@ -767,6 +768,86 @@ static void test_blockSplitter_incompressibleExpansionProtection(unsigned testNb
         ZSTD_freeCCtx(cctx);
     }
     DISPLAYLEVEL(3, "OK \n");
+}
+
+static unsigned test_get1BlockSummary(unsigned testNb)
+{
+    static const ZSTD_Sequence nseqs[] = {
+        { 10, 2, 4, 1 },
+        { 20, 3, 5, 2 },
+        { 30, 6, 8, 3 },
+        { 40, 7, 9, 4 },
+        { 50, 10, 12, 5 },
+        { 60, 11, 13, 6 },
+        { 0,  14, 0, 7 },
+        { 70, 15, 17, 8 },
+        { 80, 16, 18, 9 },
+        { 90, 19, 21, 1 },
+        { 99, 20, 22, 2 },
+    };
+    static const BlockSummary blocks[] = {
+        { 7, 104, 53 },
+        { 6, 98, 51 },
+        { 5, 90, 48 },
+        { 4, 76, 42 },
+        { 3, 60, 35 },
+        { 2, 38, 25 },
+        { 1, 14, 14 },
+    };
+    size_t i;
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with empty array : ", testNb++);
+    {
+        BlockSummary bs = ZSTD_get1BlockSummary(nseqs, 0);
+        CHECK_EQ(bs.nbSequences, ERROR(externalSequences_invalid));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with 1 literal only : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = { { 0, 5, 0, 0 } };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 1);
+        CHECK_EQ(bs.nbSequences, 1);
+        CHECK_EQ(bs.litSize, 5);
+        CHECK_EQ(bs.blockSize, 5);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with no terminator : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = { { 10, 2, 4, 0 }, { 20, 3, 5, 0 } };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 2);
+        CHECK_EQ(bs.nbSequences, ERROR(externalSequences_invalid));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with rep ignored : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = {
+            { 10, 2, 4, 2 },
+            { 10, 3, 5, 2 },
+            { 0, 7, 0, 3 },
+        };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 3);
+        CHECK_EQ(bs.nbSequences, 3);
+        CHECK_EQ(bs.litSize, 2 + 3 + 7);
+        CHECK_EQ(bs.blockSize, (4 + 5) + (2 + 3 + 7));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    assert(COUNTOF(nseqs) > COUNTOF(blocks));
+    for (i = 0; i < COUNTOF(blocks); ++i) {
+        BlockSummary bs;
+        DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with %u inputs : ",
+                     testNb++, (unsigned)(COUNTOF(nseqs) - i));
+        bs = ZSTD_get1BlockSummary(nseqs + i, COUNTOF(nseqs) - i);
+        CHECK_EQ(bs.nbSequences, blocks[i].nbSequences);
+        CHECK_EQ(bs.litSize, blocks[i].litSize);
+        CHECK_EQ(bs.blockSize, blocks[i].blockSize);
+        DISPLAYLEVEL(3, "OK \n");
+    }
+
+    return testNb;
 }
 
 /* ============================================================= */
@@ -4003,6 +4084,8 @@ static int basicUnitTests(U32 const seed, double compressibility)
         free(seqs);
     }
     DISPLAYLEVEL(3, "OK \n");
+
+    testNb = test_get1BlockSummary(testNb);
 
     DISPLAYLEVEL(3, "test%3i : ZSTD_compressSequencesAndLiterals : ", testNb++);
     {
