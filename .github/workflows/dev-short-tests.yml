@@ -435,8 +435,8 @@ jobs:
         make clean
         LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
         LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j -C tests test-cli-tests
-        CFLAGS="-march=armv8.2-a+sve2" LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
-        CFLAGS="-march=armv8.2-a+sve2" LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j -C tests test-cli-tests
+        CFLAGS="-O3 -march=armv8.2-a+sve2" LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
+        CFLAGS="-O3 -march=armv8.2-a+sve2" LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j -C tests test-cli-tests
 # This test is only compatible with standard libraries that support BTI (Branch Target Identification).
 # Unfortunately, the standard library provided on Ubuntu 24.04 does not have this feature enabled.
 #        make clean
