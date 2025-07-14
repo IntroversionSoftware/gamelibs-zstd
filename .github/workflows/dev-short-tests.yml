@@ -541,7 +541,7 @@ jobs:
     steps:
     - run: git config --global core.autocrlf input
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # tag=v4.2.2
-    - uses: cygwin/cygwin-install-action@f61179d72284ceddc397ed07ddb444d82bf9e559 # tag=v5
+    - uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # tag=v6
       with:
         platform: x86_64
         packages: >-
