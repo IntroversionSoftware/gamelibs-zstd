@@ -45,6 +45,7 @@
 #include "zstd_internal.h" /* ZSTD_WORKSPACETOOLARGE_MAXDURATION, ZSTD_WORKSPACETOOLARGE_FACTOR, KB, MB */
 #include "threading.h"    /* ZSTD_pthread_create, ZSTD_pthread_join */
 #include "compress/hist.h" /* HIST_count_wksp */
+#include "compress/zstd_compress_internal.h" /* ZSTD_get1BlockSummary */
 
 
 /*-************************************
@@ -767,6 +768,210 @@ static void test_blockSplitter_incompressibleExpansionProtection(unsigned testNb
         ZSTD_freeCCtx(cctx);
     }
     DISPLAYLEVEL(3, "OK \n");
+}
+
+size_t convertSequences_noRepcodes(SeqDef* dstSeqs, const ZSTD_Sequence* inSeqs,
+    size_t nbSequences);
+
+static size_t convertSequences_noRepcodes_ref(
+    SeqDef* dstSeqs,
+    const ZSTD_Sequence* inSeqs,
+    size_t nbSequences)
+{
+    size_t longLen = 0;
+    size_t n;
+    for (n=0; n<nbSequences; n++) {
+        dstSeqs[n].offBase = OFFSET_TO_OFFBASE(inSeqs[n].offset);
+        dstSeqs[n].litLength = (U16)inSeqs[n].litLength;
+        dstSeqs[n].mlBase = (U16)(inSeqs[n].matchLength - MINMATCH);
+        /* Check for long length > 65535. */
+        if (UNLIKELY(inSeqs[n].matchLength > 65535+MINMATCH)) {
+            assert(longLen == 0);
+            longLen = n + 1;
+        }
+        if (UNLIKELY(inSeqs[n].litLength > 65535)) {
+            assert(longLen == 0);
+            longLen = n + nbSequences + 1;
+        }
+    }
+    return longLen;
+}
+
+static unsigned test_convertSequences_noRepcodes(unsigned seed, unsigned testNb)
+{
+    ZSTD_Sequence nsrc[12];
+    SeqDef ndst[12], rdst[12];
+    size_t ref, ret, i, j;
+
+    seed += 0xDEADBEEF;
+    for (i = 0; i < COUNTOF(nsrc); ++i) {
+        seed = 48271 * ((unsigned)i + seed);
+        nsrc[i].offset = (seed & 0xFFFF) | 1;   /* Offset shall not be zero. */
+        seed = 48271 * ((unsigned)i + seed);
+        nsrc[i].litLength = seed & 0xFFFF;
+        seed = 48271 * ((unsigned)i + seed);
+        nsrc[i].matchLength = (seed & 0xFFFFFF) % (65536 + MINMATCH);
+        seed = 48271 * ((unsigned)i + seed);
+        nsrc[i].rep = seed & 0xFF;
+    }
+
+    /* For near overflow and proper negative value handling. */
+    nsrc[5].matchLength = 65535 + MINMATCH;
+    nsrc[6].litLength = 65535;
+    nsrc[6].matchLength = 0;
+    nsrc[7].litLength = 0;
+    nsrc[7].matchLength = MINMATCH;
+
+    for (i = 0; i <= COUNTOF(nsrc); ++i) {
+        DISPLAYLEVEL(3, "test%3u : convertSequences_noRepcodes with %u inputs : ",
+                     testNb++, (unsigned)i);
+        memset(ndst, 0, sizeof(ndst));
+        memset(rdst, 0, sizeof(rdst));
+        ref = convertSequences_noRepcodes_ref(rdst, nsrc, i);
+        ret = convertSequences_noRepcodes(ndst, nsrc, i);
+        CHECK_EQ(ret, ref);
+        CHECK_EQ(memcmp(rdst, ndst, sizeof(ndst)), 0);
+        DISPLAYLEVEL(3, "OK \n");
+    }
+
+    nsrc[7].matchLength = 65536 + MINMATCH;
+    for (i = 8; i <= COUNTOF(nsrc); ++i) {
+        DISPLAYLEVEL(3, "test%3u : convertSequences_noRepcodes with %u inputs and "
+                     "matchLength overflow : ",
+                     testNb++, (unsigned)i);
+        memset(ndst, 0, sizeof(ndst));
+        memset(rdst, 0, sizeof(rdst));
+        ref = convertSequences_noRepcodes_ref(rdst, nsrc, i);
+        ret = convertSequences_noRepcodes(ndst, nsrc, i);
+        CHECK_EQ(ret, ref);
+        CHECK_EQ(memcmp(rdst, ndst, sizeof(ndst)), 0);
+        DISPLAYLEVEL(3, "OK \n");
+
+        assert(COUNTOF(nsrc) > 8);
+        for (j = 4; j < 8; ++j) {
+            DISPLAYLEVEL(3, "test%3u : convertSequences_noRepcodes with %u inputs and "
+                         "matchLength overflow #%u : ",
+                         testNb++, (unsigned)i, (unsigned)(i - j));
+            memset(ndst, 0, sizeof(ndst));
+            memset(rdst, 0, sizeof(rdst));
+            ref = convertSequences_noRepcodes_ref(rdst, nsrc + j, i - j);
+            ret = convertSequences_noRepcodes(ndst, nsrc + j, i - j);
+            CHECK_EQ(ret, ref);
+            CHECK_EQ(memcmp(rdst, ndst, sizeof(ndst)), 0);
+            DISPLAYLEVEL(3, "OK \n");
+        }
+    }
+    nsrc[7].matchLength = 1;
+
+    nsrc[7].litLength = 65536;
+    for (i = 8; i <= COUNTOF(nsrc); ++i) {
+        DISPLAYLEVEL(3, "test%3u : convertSequences_noRepcodes with %u inputs and "
+                     "litLength overflow: ",
+                     testNb++, (unsigned)i);
+        memset(ndst, 0, sizeof(ndst));
+        memset(rdst, 0, sizeof(rdst));
+        ref = convertSequences_noRepcodes_ref(rdst, nsrc, i);
+        ret = convertSequences_noRepcodes(ndst, nsrc, i);
+        CHECK_EQ(ret, ref);
+        CHECK_EQ(memcmp(rdst, ndst, sizeof(ndst)), 0);
+        DISPLAYLEVEL(3, "OK \n");
+
+        assert(COUNTOF(nsrc) > 8);
+        for (j = 4; j < 8; ++j) {
+            DISPLAYLEVEL(3, "test%3u : convertSequences_noRepcodes with %u inputs and "
+                         "litLength overflow #%u: ",
+                         testNb++, (unsigned)i, (unsigned)(i - j));
+            memset(ndst, 0, sizeof(ndst));
+            memset(rdst, 0, sizeof(rdst));
+            ref = convertSequences_noRepcodes_ref(rdst, nsrc + j, i - j);
+            ret = convertSequences_noRepcodes(ndst, nsrc + j, i - j);
+            CHECK_EQ(ret, ref);
+            CHECK_EQ(memcmp(rdst, ndst, sizeof(ndst)), 0);
+            DISPLAYLEVEL(3, "OK \n");
+        }
+    }
+
+    return testNb;
+}
+
+static unsigned test_get1BlockSummary(unsigned testNb)
+{
+    static const ZSTD_Sequence nseqs[] = {
+        { 10, 2, 4, 1 },
+        { 20, 3, 5, 2 },
+        { 30, 6, 8, 3 },
+        { 40, 7, 9, 4 },
+        { 50, 10, 12, 5 },
+        { 60, 11, 13, 6 },
+        { 0,  14, 0, 7 },
+        { 70, 15, 17, 8 },
+        { 80, 16, 18, 9 },
+        { 90, 19, 21, 1 },
+        { 99, 20, 22, 2 },
+    };
+    static const BlockSummary blocks[] = {
+        { 7, 104, 53 },
+        { 6, 98, 51 },
+        { 5, 90, 48 },
+        { 4, 76, 42 },
+        { 3, 60, 35 },
+        { 2, 38, 25 },
+        { 1, 14, 14 },
+    };
+    size_t i;
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with empty array : ", testNb++);
+    {
+        BlockSummary bs = ZSTD_get1BlockSummary(nseqs, 0);
+        CHECK_EQ(bs.nbSequences, ERROR(externalSequences_invalid));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with 1 literal only : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = { { 0, 5, 0, 0 } };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 1);
+        CHECK_EQ(bs.nbSequences, 1);
+        CHECK_EQ(bs.litSize, 5);
+        CHECK_EQ(bs.blockSize, 5);
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with no terminator : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = { { 10, 2, 4, 0 }, { 20, 3, 5, 0 } };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 2);
+        CHECK_EQ(bs.nbSequences, ERROR(externalSequences_invalid));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with rep ignored : ", testNb++);
+    {
+        static const ZSTD_Sequence seqs[] = {
+            { 10, 2, 4, 2 },
+            { 10, 3, 5, 2 },
+            { 0, 7, 0, 3 },
+        };
+        BlockSummary bs = ZSTD_get1BlockSummary(seqs, 3);
+        CHECK_EQ(bs.nbSequences, 3);
+        CHECK_EQ(bs.litSize, 2 + 3 + 7);
+        CHECK_EQ(bs.blockSize, (4 + 5) + (2 + 3 + 7));
+    }
+    DISPLAYLEVEL(3, "OK \n");
+
+    assert(COUNTOF(nseqs) > COUNTOF(blocks));
+    for (i = 0; i < COUNTOF(blocks); ++i) {
+        BlockSummary bs;
+        DISPLAYLEVEL(3, "test%3u : ZSTD_get1BlockSummary with %u inputs : ",
+                     testNb++, (unsigned)(COUNTOF(nseqs) - i));
+        bs = ZSTD_get1BlockSummary(nseqs + i, COUNTOF(nseqs) - i);
+        CHECK_EQ(bs.nbSequences, blocks[i].nbSequences);
+        CHECK_EQ(bs.litSize, blocks[i].litSize);
+        CHECK_EQ(bs.blockSize, blocks[i].blockSize);
+        DISPLAYLEVEL(3, "OK \n");
+    }
+
+    return testNb;
 }
 
 /* ============================================================= */
@@ -4003,6 +4208,10 @@ static int basicUnitTests(U32 const seed, double compressibility)
         free(seqs);
     }
     DISPLAYLEVEL(3, "OK \n");
+
+    testNb = test_convertSequences_noRepcodes(seed, testNb);
+
+    testNb = test_get1BlockSummary(testNb);
 
     DISPLAYLEVEL(3, "test%3i : ZSTD_compressSequencesAndLiterals : ", testNb++);
     {
