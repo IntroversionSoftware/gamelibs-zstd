@@ -7383,6 +7383,155 @@ size_t convertSequences_noRepcodes(SeqDef* dstSeqs, const ZSTD_Sequence* inSeqs,
  * but since this implementation is targeting modern systems (>= Sapphire Rapid),
  * it's not useful to develop and maintain code for older pre-AVX2 platforms */
 
+#elif defined(ZSTD_ARCH_ARM_SVE2)
+
+/*
+ * Checks if any active element in a signed 8-bit integer vector is greater
+ * than zero.
+ *
+ * @param g Governing predicate selecting active lanes.
+ * @param a Input vector of signed 8-bit integers.
+ *
+ * @return True if any active element in `a` is > 0, false otherwise.
+ */
+FORCE_INLINE_TEMPLATE int cmpgtz_any_s8(svbool_t g, svint8_t a)
+{
+    svbool_t ptest = svcmpgt_n_s8(g, a, 0);
+    return svptest_any(ptest, ptest);
+}
+
+size_t convertSequences_noRepcodes(
+    SeqDef* dstSeqs,
+    const ZSTD_Sequence* inSeqs,
+    size_t nbSequences)
+{
+    /* Process the input with `8 * VL / element` lanes. */
+    const size_t lanes = 8 * svcntb() / sizeof(ZSTD_Sequence);
+    size_t longLen = 0;
+    size_t n = 0;
+
+    /* SVE permutation depends on the specific definition of target structures. */
+    ZSTD_STATIC_ASSERT(sizeof(ZSTD_Sequence) == 16);
+    ZSTD_STATIC_ASSERT(offsetof(ZSTD_Sequence, offset) == 0);
+    ZSTD_STATIC_ASSERT(offsetof(ZSTD_Sequence, litLength) == 4);
+    ZSTD_STATIC_ASSERT(offsetof(ZSTD_Sequence, matchLength) == 8);
+    ZSTD_STATIC_ASSERT(sizeof(SeqDef) == 8);
+    ZSTD_STATIC_ASSERT(offsetof(SeqDef, offBase) == 0);
+    ZSTD_STATIC_ASSERT(offsetof(SeqDef, litLength) == 4);
+    ZSTD_STATIC_ASSERT(offsetof(SeqDef, mlBase) == 6);
+
+    if (nbSequences >= lanes) {
+        const svbool_t ptrue = svptrue_b8();
+        /* 16-bit of {ZSTD_REP_NUM, 0, -MINMATCH, 0} extended to 32-bit lanes. */
+        const svuint32_t vaddition = svreinterpret_u32(
+            svunpklo_s32(svreinterpret_s16(svdup_n_u64(ZSTD_REP_NUM | (((U64)(U16)-MINMATCH) << 32)))));
+        /* For permutation of 16-bit units: 0, 1, 2, 4, 8, 9, 10, 12, ... */
+        const svuint16_t vmask = svreinterpret_u16(
+            svindex_u64(0x0004000200010000, 0x0008000800080008));
+        /* Upper bytes of `litLength` and `matchLength` will be packed into the
+         * middle of overflow check vector. */
+        const svbool_t pmid = svcmpne_n_u8(
+            ptrue, svreinterpret_u8(svdup_n_u64(0x0000FFFFFFFF0000)), 0);
+
+        do {
+            /* Load `lanes` number of `ZSTD_Sequence` into 8 vectors. */
+            const svuint32_t vin0 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 0);
+            const svuint32_t vin1 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 1);
+            const svuint32_t vin2 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 2);
+            const svuint32_t vin3 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 3);
+            const svuint32_t vin4 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 4);
+            const svuint32_t vin5 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 5);
+            const svuint32_t vin6 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 6);
+            const svuint32_t vin7 = svld1_vnum_u32(ptrue, &inSeqs[n].offset, 7);
+
+            /* Add {ZSTD_REP_NUM, 0, -MINMATCH, 0} to each structures. */
+            const svuint16x2_t vadd01 = svcreate2_u16(
+                svreinterpret_u16(svadd_u32_x(ptrue, vin0, vaddition)),
+                svreinterpret_u16(svadd_u32_x(ptrue, vin1, vaddition)));
+            const svuint16x2_t vadd23 = svcreate2_u16(
+                svreinterpret_u16(svadd_u32_x(ptrue, vin2, vaddition)),
+                svreinterpret_u16(svadd_u32_x(ptrue, vin3, vaddition)));
+            const svuint16x2_t vadd45 = svcreate2_u16(
+                svreinterpret_u16(svadd_u32_x(ptrue, vin4, vaddition)),
+                svreinterpret_u16(svadd_u32_x(ptrue, vin5, vaddition)));
+            const svuint16x2_t vadd67 = svcreate2_u16(
+                svreinterpret_u16(svadd_u32_x(ptrue, vin6, vaddition)),
+                svreinterpret_u16(svadd_u32_x(ptrue, vin7, vaddition)));
+
+            /* Shuffle and pack bytes so each vector contains SeqDef structures. */
+            const svuint16_t vout01 = svtbl2_u16(vadd01, vmask);
+            const svuint16_t vout23 = svtbl2_u16(vadd23, vmask);
+            const svuint16_t vout45 = svtbl2_u16(vadd45, vmask);
+            const svuint16_t vout67 = svtbl2_u16(vadd67, vmask);
+
+            /* Pack the upper 16-bits of 32-bit lanes for overflow check. */
+            const svuint16_t voverflow01 = svuzp2_u16(svget2_u16(vadd01, 0),
+                                                      svget2_u16(vadd01, 1));
+            const svuint16_t voverflow23 = svuzp2_u16(svget2_u16(vadd23, 0),
+                                                      svget2_u16(vadd23, 1));
+            const svuint16_t voverflow45 = svuzp2_u16(svget2_u16(vadd45, 0),
+                                                      svget2_u16(vadd45, 1));
+            const svuint16_t voverflow67 = svuzp2_u16(svget2_u16(vadd67, 0),
+                                                      svget2_u16(vadd67, 1));
+
+            /* We don't need the whole 16 bits of the overflow part. Only 1 bit
+             * is needed, so we pack tightly and merge multiple vectors to be
+             * able to use a single comparison to handle the overflow case.
+             * However, we also need to handle the possible negative values of
+             * matchLength parts, so we use signed comparison later. */
+            const svint8_t voverflow =
+                svmax_s8_x(pmid,
+                           svtrn1_s8(svreinterpret_s8(voverflow01),
+                                     svreinterpret_s8(voverflow23)),
+                           svtrn1_s8(svreinterpret_s8(voverflow45),
+                                     svreinterpret_s8(voverflow67)));
+
+            /* Store `lanes` number of `SeqDef` structures from 4 vectors. */
+            svst1_vnum_u32(ptrue, &dstSeqs[n].offBase, 0, svreinterpret_u32(vout01));
+            svst1_vnum_u32(ptrue, &dstSeqs[n].offBase, 1, svreinterpret_u32(vout23));
+            svst1_vnum_u32(ptrue, &dstSeqs[n].offBase, 2, svreinterpret_u32(vout45));
+            svst1_vnum_u32(ptrue, &dstSeqs[n].offBase, 3, svreinterpret_u32(vout67));
+
+            /* Check if any enabled lanes of the overflow vector is larger than
+             * zero, only one such may happen. */
+            if (UNLIKELY(cmpgtz_any_s8(pmid, voverflow))) {
+                /* Scalar search for long match is needed because we merged
+                 * multiple overflow bytes with `max`. */
+                size_t i;
+                for (i = n; i < n + lanes; i++) {
+                    if (inSeqs[i].matchLength > 65535 + MINMATCH) {
+                        assert(longLen == 0);
+                        longLen = i + 1;
+                    }
+                    if (inSeqs[i].litLength > 65535) {
+                        assert(longLen == 0);
+                        longLen = i + nbSequences + 1;
+                    }
+                }
+            }
+
+            n += lanes;
+        } while(n <= nbSequences - lanes);
+    }
+
+    /* Handle remaining elements. */
+    for (; n < nbSequences; n++) {
+        dstSeqs[n].offBase = OFFSET_TO_OFFBASE(inSeqs[n].offset);
+        dstSeqs[n].litLength = (U16)inSeqs[n].litLength;
+        dstSeqs[n].mlBase = (U16)(inSeqs[n].matchLength - MINMATCH);
+        /* Check for long length > 65535. */
+        if (UNLIKELY(inSeqs[n].matchLength > 65535 + MINMATCH)) {
+            assert(longLen == 0);
+            longLen = n + 1;
+        }
+        if (UNLIKELY(inSeqs[n].litLength > 65535)) {
+            assert(longLen == 0);
+            longLen = n + nbSequences + 1;
+        }
+    }
+    return longLen;
+}
+
 #elif defined(ZSTD_ARCH_ARM_NEON) && (defined(__aarch64__) || defined(_M_ARM64))
 
 size_t convertSequences_noRepcodes(
