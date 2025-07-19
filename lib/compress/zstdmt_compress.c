@@ -1268,8 +1268,7 @@ size_t ZSTDMT_initCStream_internal(
 
     if (mtctx->allJobsCompleted == 0) {   /* previous compression not correctly finished */
         ZSTDMT_waitForAllJobsCompleted(mtctx);
-        ZSTDMT_releaseAllJobResources(mtctx);
-        mtctx->allJobsCompleted = 1;
+        ZSTDMT_releaseAllJobResources(mtctx); /* Will set allJobsCompleted to 1 */
     }
 
     mtctx->params = params;
