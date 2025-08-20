@@ -96,10 +96,10 @@ jobs:
             runner: "windows-2022"
             # Intentionally omit ZSTD_BUILD_TESTS to reproduce the CXX language configuration bug
             cmake_extra_flags: "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
-          # - generator: "Visual Studio 17 2022"
-          #   flags: "-A ARM64"
-          #   name: "MSVC ARM64"
-          #   runner: "windows-2022-arm64"  # Disabled due to very long queue times
+          - generator: "Visual Studio 17 2022"
+            flags: "-A ARM64"
+            name: "MSVC ARM64"
+            runner: "windows-11-arm"  # githuh runner for WOA instance
           - generator: "MinGW Makefiles"
             flags: ""
             name: "MinGW"
