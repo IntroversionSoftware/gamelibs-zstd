@@ -233,7 +233,7 @@ static void usageAdvanced(const char* programName)
     DISPLAYOUT("  --patch-from=REF              Use REF as the reference point for Zstandard's diff engine. \n");
     DISPLAYOUT("  --patch-apply                 Equivalent for `-d --patch-from` \n\n");
 # ifdef ZSTD_MULTITHREAD
-    DISPLAYOUT("  -T#                           Spawn # compression threads. [Default: 1; pass 0 for core count.]\n");
+    DISPLAYOUT("  -T#                           Spawn # compression threads. [Default: %i; pass 0 for core count.]\n", ZSTDCLI_NBTHREADS_DEFAULT);
     DISPLAYOUT("  --single-thread               Share a single thread for I/O and compression (slightly different than `-T1`).\n");
     DISPLAYOUT("  --auto-threads={physical|logical}\n");
     DISPLAYOUT("                                Use physical/logical cores when using `-T0`. [Default: Physical]\n\n");
