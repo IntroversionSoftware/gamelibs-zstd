@@ -1435,7 +1435,7 @@ int main(int argCount, const char* argv[])
         if (cLevel > ZSTD_maxCLevel()) cLevel = ZSTD_maxCLevel();
         if (cLevelLast > ZSTD_maxCLevel()) cLevelLast = ZSTD_maxCLevel();
         if (cLevelLast < cLevel) cLevelLast = cLevel;
-        DISPLAYLEVEL(3, "Benchmarking ");
+        DISPLAYLEVEL(2, "Benchmarking ");
         if (filenames->tableSize > 1)
             DISPLAYLEVEL(3, "%u files ", (unsigned)filenames->tableSize);
         if (cLevelLast > cLevel) {
@@ -1443,7 +1443,7 @@ int main(int argCount, const char* argv[])
         } else {
             DISPLAYLEVEL(3, "at level %d ", cLevel);
         }
-        DISPLAYLEVEL(3, "using %i threads \n", nbWorkers);
+        DISPLAYLEVEL(2, "using %i threads \n", nbWorkers);
         if (filenames->tableSize > 0) {
             if(separateFiles) {
                 unsigned i;
