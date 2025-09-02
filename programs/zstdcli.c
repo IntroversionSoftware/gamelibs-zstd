@@ -47,7 +47,7 @@
 #define ZSTDCLI_NBTHREADS_DEFAULT (unsigned)(MAX(1, MIN(4, UTIL_countLogicalCores() / 4)))
 #endif
 
-
+static unsigned init_nbWorkers(unsigned defaultNbWorkers);
 
 /*-************************************
 *  Constants
@@ -95,6 +95,7 @@ static U32 g_ldmBucketSizeLog = LDM_PARAM_DEFAULT;
 
 #define DEFAULT_ACCEL 1
 #define NBWORKERS_AUTOCPU 0
+#define NBWORKERS_UNSET UINT_MAX
 
 typedef enum { cover, fastCover, legacy } dictType;
 
@@ -233,7 +234,7 @@ static void usageAdvanced(const char* programName)
     DISPLAYOUT("  --patch-from=REF              Use REF as the reference point for Zstandard's diff engine. \n");
     DISPLAYOUT("  --patch-apply                 Equivalent for `-d --patch-from` \n\n");
 # ifdef ZSTD_MULTITHREAD
-    DISPLAYOUT("  -T#                           Spawn # compression threads. [Default: %i; pass 0 for core count.]\n", ZSTDCLI_NBTHREADS_DEFAULT);
+    DISPLAYOUT("  -T#                           Spawn # compression threads. [Default: %u; pass 0 for core count.]\n", init_nbWorkers(ZSTDCLI_NBTHREADS_DEFAULT));
     DISPLAYOUT("  --single-thread               Share a single thread for I/O and compression (slightly different than `-T1`).\n");
     DISPLAYOUT("  --auto-threads={physical|logical}\n");
     DISPLAYOUT("                                Use physical/logical cores when using `-T0`. [Default: Physical]\n\n");
@@ -783,7 +784,7 @@ static int init_cLevel(void) {
     return ZSTDCLI_CLEVEL_DEFAULT;
 }
 
-static unsigned init_nbWorkers(void) {
+static unsigned init_nbWorkers(unsigned defaultNbWorkers) {
 #ifdef ZSTD_MULTITHREAD
     const char* const env = getenv(ENV_NBWORKERS);
     if (env != NULL) {
@@ -792,7 +793,7 @@ static unsigned init_nbWorkers(void) {
             unsigned nbThreads;
             if (readU32FromCharChecked(&ptr, &nbThreads)) {
                 DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: numeric value too large \n", ENV_NBWORKERS, env);
-                return ZSTDCLI_NBTHREADS_DEFAULT;
+                return defaultNbWorkers;
             } else if (*ptr == 0) {
                 return nbThreads;
             }
@@ -800,7 +801,7 @@ static unsigned init_nbWorkers(void) {
         DISPLAYLEVEL(2, "Ignore environment variable setting %s=%s: not a valid unsigned value \n", ENV_NBWORKERS, env);
     }
 
-    return ZSTDCLI_NBTHREADS_DEFAULT;
+    return defaultNbWorkers;
 #else
     return 1;
 #endif
@@ -881,7 +882,7 @@ int main(int argCount, const char* argv[])
         ultra = 0,
         cLevelLast = MINCLEVEL - 1, /* for benchmark range */
         setThreads_non1 = 0;
-    unsigned nbWorkers = init_nbWorkers();
+    unsigned nbWorkers = init_nbWorkers(NBWORKERS_UNSET);
     ZSTD_ParamSwitch_e mmapDict = ZSTD_ps_auto;
     ZSTD_ParamSwitch_e useRowMatchFinder = ZSTD_ps_auto;
     FIO_compressionType_t cType = FIO_zstdCompression;
@@ -1410,7 +1411,9 @@ int main(int argCount, const char* argv[])
     /* Check if benchmark is selected */
     if (operation==zom_bench) {
 #ifndef ZSTD_NOBENCH
-        int const benchThreadsMsgLevel = 2 + (nbWorkers <= 1);
+        int benchThreadsMsgLevel = 2;
+        if (nbWorkers == NBWORKERS_UNSET) nbWorkers = 1;
+        if (nbWorkers <= 1) benchThreadsMsgLevel = 3;
         if (cType != FIO_zstdCompression) {
             DISPLAYLEVEL(1, "benchmark mode is only compatible with zstd format \n");
             CLEAN_RETURN(1);
@@ -1471,6 +1474,7 @@ int main(int argCount, const char* argv[])
         zParams.compressionLevel = dictCLevel;
         zParams.notificationLevel = (unsigned)g_displayLevel;
         zParams.dictID = dictID;
+        if (nbWorkers == NBWORKERS_UNSET) nbWorkers = init_nbWorkers(ZSTDCLI_NBTHREADS_DEFAULT);
         if (dict == cover) {
             int const optimize = !coverParams.k || !coverParams.d;
             coverParams.nbThreads = (unsigned)nbWorkers;
@@ -1593,6 +1597,7 @@ int main(int argCount, const char* argv[])
 #ifndef ZSTD_NOCOMPRESS
         FIO_setCompressionType(prefs, cType);
         FIO_setContentSize(prefs, contentSize);
+        if (nbWorkers == NBWORKERS_UNSET) nbWorkers = init_nbWorkers(ZSTDCLI_NBTHREADS_DEFAULT);
         FIO_setNbWorkers(prefs, (int)nbWorkers);
         FIO_setJobSize(prefs, (int)chunkSize);
         if (g_overlapLog!=OVERLAP_LOG_DEFAULT) FIO_setOverlapLog(prefs, (int)g_overlapLog);
