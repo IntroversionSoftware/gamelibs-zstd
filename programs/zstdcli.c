@@ -1410,6 +1410,7 @@ int main(int argCount, const char* argv[])
     /* Check if benchmark is selected */
     if (operation==zom_bench) {
 #ifndef ZSTD_NOBENCH
+        int const benchThreadsMsgLevel = 2 + (nbWorkers <= 1);
         if (cType != FIO_zstdCompression) {
             DISPLAYLEVEL(1, "benchmark mode is only compatible with zstd format \n");
             CLEAN_RETURN(1);
@@ -1435,7 +1436,7 @@ int main(int argCount, const char* argv[])
         if (cLevel > ZSTD_maxCLevel()) cLevel = ZSTD_maxCLevel();
         if (cLevelLast > ZSTD_maxCLevel()) cLevelLast = ZSTD_maxCLevel();
         if (cLevelLast < cLevel) cLevelLast = cLevel;
-        DISPLAYLEVEL(2, "Benchmarking ");
+        DISPLAYLEVEL(benchThreadsMsgLevel, "Benchmarking ");
         if (filenames->tableSize > 1)
             DISPLAYLEVEL(3, "%u files ", (unsigned)filenames->tableSize);
         if (cLevelLast > cLevel) {
@@ -1443,7 +1444,7 @@ int main(int argCount, const char* argv[])
         } else {
             DISPLAYLEVEL(3, "at level %d ", cLevel);
         }
-        DISPLAYLEVEL(2, "using %i threads \n", nbWorkers);
+        DISPLAYLEVEL(benchThreadsMsgLevel, "using %i threads \n", nbWorkers);
         if (filenames->tableSize > 0) {
             if(separateFiles) {
                 unsigned i;
