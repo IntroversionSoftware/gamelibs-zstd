@@ -803,6 +803,7 @@ static unsigned init_nbWorkers(unsigned defaultNbWorkers) {
 
     return defaultNbWorkers;
 #else
+    (void)defaultNbWorkers;
     return 1;
 #endif
 }
