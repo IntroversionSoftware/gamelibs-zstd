@@ -282,13 +282,16 @@ static fileStats DiB_fileStats(const char** fileNamesTable, int nbFiles, size_t 
       DISPLAYLEVEL(1, "[DEBUG] File '%s': size=%lld\n", fileNamesTable[n], (long long)fileSize);
       
       /* TODO: is there a minimum sample size? What if the file is 1-byte? */
-      if (fileSize == 0) {
-        DISPLAYLEVEL(3, "Sample file '%s' has zero size, skipping...\n", fileNamesTable[n]);
+      /* Skip empty or invalid files */
+      if (fileSize <= 0) {
+        if (fileSize < 0) {
+          DISPLAYLEVEL(3, "Sample file '%s' is unreadable or stat failed, skipping...\n",
+                       fileNamesTable[n]);
+        } else {
+          DISPLAYLEVEL(3, "Sample file '%s' has zero size, skipping...\n",
+                     fileNamesTable[n]);
+        }
         continue;
-      } else if (fileSize < 0) {
-        /* BUG: This path is NOT skipped but should be! */
-        DISPLAYLEVEL(1, "[BUG] File '%s' has NEGATIVE size %lld but is NOT skipped!\n", 
-                     fileNamesTable[n], (long long)fileSize);
       }
 
       /* the case where we are breaking up files in sample chunks */
