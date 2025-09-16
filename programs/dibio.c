@@ -279,10 +279,16 @@ static fileStats DiB_fileStats(const char** fileNamesTable, int nbFiles, size_t 
 
     for (n=0; n<nbFiles; n++) {
       S64 const fileSize = DiB_getFileSize(fileNamesTable[n]);
+      DISPLAYLEVEL(1, "[DEBUG] File '%s': size=%lld\n", fileNamesTable[n], (long long)fileSize);
+      
       /* TODO: is there a minimum sample size? What if the file is 1-byte? */
       if (fileSize == 0) {
         DISPLAYLEVEL(3, "Sample file '%s' has zero size, skipping...\n", fileNamesTable[n]);
         continue;
+      } else if (fileSize < 0) {
+        /* BUG: This path is NOT skipped but should be! */
+        DISPLAYLEVEL(1, "[BUG] File '%s' has NEGATIVE size %lld but is NOT skipped!\n", 
+                     fileNamesTable[n], (long long)fileSize);
       }
 
       /* the case where we are breaking up files in sample chunks */
@@ -290,6 +296,8 @@ static fileStats DiB_fileStats(const char** fileNamesTable, int nbFiles, size_t 
         /* TODO: is there a minimum sample size? Can we have a 1-byte sample? */
         fs.nbSamples += (int)((fileSize + chunkSize-1) / chunkSize);
         fs.totalSizeToLoad += fileSize;
+        DISPLAYLEVEL(1, "[DEBUG] After chunked file: nbSamples=%d, totalSizeToLoad=%lld\n", 
+                     fs.nbSamples, (long long)fs.totalSizeToLoad);
       }
       else {
       /* the case where one file is one sample */
@@ -303,9 +311,14 @@ static fileStats DiB_fileStats(const char** fileNamesTable, int nbFiles, size_t 
         }
         fs.nbSamples += 1;
         fs.totalSizeToLoad += MIN(fileSize, SAMPLESIZE_MAX);
+        DISPLAYLEVEL(1, "[DEBUG] After single file: nbSamples=%d, totalSizeToLoad=%lld\n", 
+                     fs.nbSamples, (long long)fs.totalSizeToLoad);
       }
     }
     DISPLAYLEVEL(4, "Found training data %d files, %d KB, %d samples\n", nbFiles, (int)(fs.totalSizeToLoad / (1 KB)), fs.nbSamples);
+    DISPLAYLEVEL(1, "[DEBUG FINAL] fileStats: nbSamples=%d, totalSizeToLoad=%lld (%s)\n", 
+                 fs.nbSamples, (long long)fs.totalSizeToLoad,
+                 fs.totalSizeToLoad < 0 ? "NEGATIVE!" : "ok");
     return fs;
 }
 
@@ -344,11 +357,18 @@ int DiB_trainFromFiles(const char* dictFileName, size_t maxDictSize,
         /* Limit the size of the training data to 2GB */
         /* TODO: there is opportunity to stop DiB_fileStats() early when the data limit is reached */
         loadedSize = (size_t)MIN( MIN((S64)maxMem, fs.totalSizeToLoad), MAX_SAMPLES_SIZE );
+        DISPLAYLEVEL(1, "[DEBUG] Memory calc: totalSizeToLoad=%lld, maxMem=%zu, loadedSize=%zu (0x%zx)\n",
+                     (long long)fs.totalSizeToLoad, maxMem, loadedSize, loadedSize);
+        if (fs.totalSizeToLoad < 0) {
+            DISPLAYLEVEL(1, "[BUG] totalSizeToLoad is NEGATIVE! This will cause allocation issues!\n");
+        }
         if (memLimit != 0) {
             DISPLAYLEVEL(2, "!  Warning : setting manual memory limit for dictionary training data at %u MB \n",
                 (unsigned)(memLimit / (1 MB)));
             loadedSize = (size_t)MIN(loadedSize, memLimit);
         }
+        DISPLAYLEVEL(1, "[DEBUG] About to malloc: srcBuffer size=%zu, sampleSizes array size=%zu\n",
+                     loadedSize+NOISELENGTH, (size_t)(fs.nbSamples * sizeof(size_t)));
         srcBuffer = malloc(loadedSize+NOISELENGTH);
         sampleSizes = (size_t*)malloc(fs.nbSamples * sizeof(size_t));
     }
