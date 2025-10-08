@@ -1332,14 +1332,11 @@ ZSTD_decodeSequence(seqState_t* seqState, const ZSTD_longOffset_e longOffsets, c
             seq.offset = offset;
         }
 
-        if (mlBits > 0) {
+        if (mlBits > 0)
             seq.matchLength += BIT_readBitsFast(&seqState->DStream, mlBits/*>0*/);
 
-            if (MEM_32bits() && (mlBits+llBits >= STREAM_ACCUMULATOR_MIN_32-LONG_OFFSETS_MAX_EXTRA_BITS_32))
-                BIT_reloadDStream(&seqState->DStream);
-            if (MEM_64bits() && (totalBits >= STREAM_ACCUMULATOR_MIN_64-(LLFSELog+MLFSELog+OffFSELog)))
-                BIT_reloadDStream(&seqState->DStream);
-        }
+        if (UNLIKELY(totalBits >= STREAM_ACCUMULATOR_MIN_64-(LLFSELog+MLFSELog+OffFSELog)))
+            BIT_reloadDStream(&seqState->DStream);
 
         /* Ensure there are enough bits to read the rest of data in 64-bit mode. */
         ZSTD_STATIC_ASSERT(16+LLFSELog+MLFSELog+OffFSELog < STREAM_ACCUMULATOR_MIN_64);
