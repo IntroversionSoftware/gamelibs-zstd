@@ -1261,6 +1261,7 @@ ZSTD_decodeSequence(seqState_t* seqState, const ZSTD_longOffset_e longOffsets, c
     const ZSTD_seqSymbol* const mlDInfo = seqState->stateML.table + seqState->stateML.state;
     const ZSTD_seqSymbol* const ofDInfo = seqState->stateOffb.table + seqState->stateOffb.state;
 #  endif
+    (void)longOffsets;
     seq.matchLength = mlDInfo->baseValue;
     seq.litLength = llDInfo->baseValue;
     {   U32 const ofBase = ofDInfo->baseValue;
@@ -1290,18 +1291,7 @@ ZSTD_decodeSequence(seqState_t* seqState, const ZSTD_longOffset_e longOffsets, c
                 ZSTD_STATIC_ASSERT(LONG_OFFSETS_MAX_EXTRA_BITS_32 == 5);
                 ZSTD_STATIC_ASSERT(STREAM_ACCUMULATOR_MIN_32 > LONG_OFFSETS_MAX_EXTRA_BITS_32);
                 ZSTD_STATIC_ASSERT(STREAM_ACCUMULATOR_MIN_32 - LONG_OFFSETS_MAX_EXTRA_BITS_32 >= MaxMLBits);
-                if (MEM_32bits() && longOffsets && (ofBits >= STREAM_ACCUMULATOR_MIN_32)) {
-                    /* Always read extra bits, this keeps the logic simple,
-                     * avoids branches, and avoids accidentally reading 0 bits.
-                     */
-                    U32 const extraBits = LONG_OFFSETS_MAX_EXTRA_BITS_32;
-                    offset = ofBase + (BIT_readBitsFast(&seqState->DStream, ofBits - extraBits) << extraBits);
-                    BIT_reloadDStream(&seqState->DStream);
-                    offset += BIT_readBitsFast(&seqState->DStream, extraBits);
-                } else {
-                    offset = ofBase + BIT_readBitsFast(&seqState->DStream, ofBits/*>0*/);   /* <=  (ZSTD_WINDOWLOG_MAX-1) bits */
-                    if (MEM_32bits()) BIT_reloadDStream(&seqState->DStream);
-                }
+                offset = ofBase + BIT_readBitsFast(&seqState->DStream, ofBits/*>0*/);   /* <=  (ZSTD_WINDOWLOG_MAX-1) bits */
                 prevOffset2 = prevOffset1;
                 prevOffset1 = prevOffset0;
                 prevOffset0 = offset;
@@ -1344,9 +1334,6 @@ ZSTD_decodeSequence(seqState_t* seqState, const ZSTD_longOffset_e longOffsets, c
         if (llBits > 0)
             seq.litLength += BIT_readBitsFast(&seqState->DStream, llBits/*>0*/);
 
-        if (MEM_32bits())
-            BIT_reloadDStream(&seqState->DStream);
-
         DEBUGLOG(6, "seq: litL=%u, matchL=%u, offset=%u",
                     (U32)seq.litLength, (U32)seq.matchLength, (U32)seq.offset);
 
@@ -1354,7 +1341,6 @@ ZSTD_decodeSequence(seqState_t* seqState, const ZSTD_longOffset_e longOffsets, c
             /* Don't update FSE state for last sequence. */
             ZSTD_updateFseStateWithDInfo(&seqState->stateLL, &seqState->DStream, llNext, llnbBits);    /* <=  9 bits */
             ZSTD_updateFseStateWithDInfo(&seqState->stateML, &seqState->DStream, mlNext, mlnbBits);    /* <=  9 bits */
-            if (MEM_32bits()) BIT_reloadDStream(&seqState->DStream);    /* <= 18 bits */
             ZSTD_updateFseStateWithDInfo(&seqState->stateOffb, &seqState->DStream, ofNext, ofnbBits);  /* <=  8 bits */
             BIT_reloadDStream(&seqState->DStream);
         }
