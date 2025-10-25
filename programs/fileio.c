@@ -68,7 +68,7 @@ static void FIO_SyncCompressIO_init(FIO_SyncCompressIO* io,
                                     const FIO_prefs_t* prefs,
                                     size_t inCapacity,
                                     size_t outCapacity);
-static void FIO_SyncCompressIO_free(FIO_SyncCompressIO* io);
+static void FIO_SyncCompressIO_destroy(FIO_SyncCompressIO* io);
 static void FIO_SyncCompressIO_setSrc(FIO_SyncCompressIO* io, FILE* file);
 static void FIO_SyncCompressIO_clearSrc(FIO_SyncCompressIO* io);
 static void FIO_SyncCompressIO_setDst(FIO_SyncCompressIO* io, FILE* file);
@@ -274,7 +274,7 @@ static void FIO_SyncCompressIO_init(FIO_SyncCompressIO* io,
     io->srcBufferLoaded = 0;
 }
 
-static void FIO_SyncCompressIO_free(FIO_SyncCompressIO* io)
+static void FIO_SyncCompressIO_destroy(FIO_SyncCompressIO* io)
 {
     if (!io) return;
     free(io->inBuffer);
@@ -1467,7 +1467,7 @@ static cRess_t FIO_createCResources(FIO_prefs_t* const prefs,
 static void FIO_freeCResources(cRess_t* const ress)
 {
     FIO_freeDict(&(ress->dict));
-    FIO_SyncCompressIO_free(&ress->io);
+    FIO_SyncCompressIO_destroy(&ress->io);
     ZSTD_freeCStream(ress->cctx);   /* never fails */
 }
 
