@@ -1147,8 +1147,14 @@ static cRess_t FIO_createCResources(FIO_prefs_t* const prefs,
     dictBufferType = (useMMap && !forceNoUseMMap) ? FIO_mmapDict : FIO_mallocDict;
     FIO_initDict(&ress.dict, dictFileName, prefs, &ress.dictFileStat, dictBufferType);   /* works with dictFileName==NULL */
 
-    ress.writeCtx = AIO_WritePool_create(prefs, ZSTD_CStreamOutSize());
-    ress.readCtx = AIO_ReadPool_create(prefs, ZSTD_CStreamInSize());
+    {
+        /* Compression paths stay synchronous for now: lower overhead and easier upkeep. */
+        int const savedAsyncIO = prefs->asyncIO;
+        prefs->asyncIO = 0;
+        ress.writeCtx = AIO_WritePool_create(prefs, ZSTD_CStreamOutSize());
+        ress.readCtx = AIO_ReadPool_create(prefs, ZSTD_CStreamInSize());
+        prefs->asyncIO = savedAsyncIO;
+    }
 
     /* Advanced parameters, including dictionary */
     if (dictFileName && (ress.dict.dictBuffer==NULL))
@@ -2070,16 +2076,12 @@ FIO_compressFilename_srcFile(FIO_ctx_t* const fCtx,
     srcFile = FIO_openSrcFile(prefs, srcFileName, &srcFileStat);
     if (srcFile == NULL) return 1;   /* srcFile could not be opened */
 
-    /* Don't use AsyncIO for small files */
+    /* AsyncIO is disabled for compression to favor predictable performance and simpler upkeep. */
     if (strcmp(srcFileName, stdinmark)) /* Stdin doesn't have stats */
         fileSize = UTIL_getFileSizeStat(&srcFileStat);
-    if(fileSize != UTIL_FILESIZE_UNKNOWN && fileSize < ZSTD_BLOCKSIZE_MAX * 3) {
-        AIO_ReadPool_setAsync(ress.readCtx, 0);
-        AIO_WritePool_setAsync(ress.writeCtx, 0);
-    } else {
-        AIO_ReadPool_setAsync(ress.readCtx, 1);
-        AIO_WritePool_setAsync(ress.writeCtx, 1);
-    }
+    (void)fileSize;
+    AIO_ReadPool_setAsync(ress.readCtx, 0);
+    AIO_WritePool_setAsync(ress.writeCtx, 0);
 
     AIO_ReadPool_setFile(ress.readCtx, srcFile);
     result = FIO_compressFilename_dstFile(
