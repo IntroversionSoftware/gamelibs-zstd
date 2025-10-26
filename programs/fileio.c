@@ -48,38 +48,6 @@
 FIO_display_prefs_t g_display_prefs = {2, FIO_ps_auto};
 UTIL_time_t g_displayClock = UTIL_TIME_INITIALIZER;
 
-/* *************************************
-*  Synchronous compression IO helpers
-*  Lightweight wrapper used by compression paths to manage buffered
-*  reads/writes without the async job machinery.
-***************************************/
-typedef struct {
-    const FIO_prefs_t* prefs;
-    FILE* srcFile;
-    FILE* dstFile;
-    unsigned storedSkips;
-    U8* inBuffer;
-    size_t inCapacity;
-    U8* srcBuffer;
-    size_t srcBufferLoaded;
-    U8* outBuffer;
-    size_t outCapacity;
-} FIO_SyncCompressIO;
-
-static void FIO_SyncCompressIO_init(FIO_SyncCompressIO* io,
-                                    const FIO_prefs_t* prefs,
-                                    size_t inCapacity,
-                                    size_t outCapacity);
-static void FIO_SyncCompressIO_destroy(FIO_SyncCompressIO* io);
-static void FIO_SyncCompressIO_setSrc(FIO_SyncCompressIO* io, FILE* file);
-static void FIO_SyncCompressIO_clearSrc(FIO_SyncCompressIO* io);
-static void FIO_SyncCompressIO_setDst(FIO_SyncCompressIO* io, FILE* file);
-static int  FIO_SyncCompressIO_closeDst(FIO_SyncCompressIO* io);
-static size_t FIO_SyncCompressIO_fillBuffer(FIO_SyncCompressIO* io, size_t minToHave);
-static void FIO_SyncCompressIO_consumeBytes(FIO_SyncCompressIO* io, size_t n);
-static void FIO_SyncCompressIO_commitOut(FIO_SyncCompressIO* io, const void* buffer, size_t size);
-static void FIO_SyncCompressIO_finish(FIO_SyncCompressIO* io);
-
 #define ZSTD_STATIC_LINKING_ONLY   /* ZSTD_magicNumber, ZSTD_frameHeaderSize_max */
 #include "../lib/zstd.h"
 #include "../lib/zstd_errors.h"  /* ZSTD_error_frameParameter_windowTooLarge */
@@ -156,6 +124,42 @@ char const* FIO_lzmaVersion(void)
 #define DEFAULT_FILE_PERMISSIONS (0666)
 #define TEMPORARY_FILE_PERMISSIONS (0600)
 #endif
+
+
+#ifndef ZSTD_NOCOMPRESS
+
+/* *************************************
+*  Synchronous compression IO helpers
+*  Lightweight wrapper used by compression paths to manage buffered
+*  reads/writes without the async job machinery.
+***************************************/
+typedef struct {
+    const FIO_prefs_t* prefs;
+    FILE* srcFile;
+    FILE* dstFile;
+    unsigned storedSkips;
+    U8* inBuffer;
+    size_t inCapacity;
+    U8* srcBuffer;
+    size_t srcBufferLoaded;
+    U8* outBuffer;
+    size_t outCapacity;
+} FIO_SyncCompressIO;
+
+static void FIO_SyncCompressIO_init(FIO_SyncCompressIO* io,
+                                    const FIO_prefs_t* prefs,
+                                    size_t inCapacity,
+                                    size_t outCapacity);
+static void FIO_SyncCompressIO_destroy(FIO_SyncCompressIO* io);
+static void FIO_SyncCompressIO_setSrc(FIO_SyncCompressIO* io, FILE* file);
+static void FIO_SyncCompressIO_clearSrc(FIO_SyncCompressIO* io);
+static void FIO_SyncCompressIO_setDst(FIO_SyncCompressIO* io, FILE* file);
+static int  FIO_SyncCompressIO_closeDst(FIO_SyncCompressIO* io);
+static size_t FIO_SyncCompressIO_fillBuffer(FIO_SyncCompressIO* io, size_t minToHave);
+static void FIO_SyncCompressIO_consumeBytes(FIO_SyncCompressIO* io, size_t n);
+static void FIO_SyncCompressIO_commitOut(FIO_SyncCompressIO* io, const void* buffer, size_t size);
+static void FIO_SyncCompressIO_finish(FIO_SyncCompressIO* io);
+
 
 static unsigned FIO_sparseWrite(FILE* file,
                                 const void* buffer, size_t bufferSize,
@@ -383,6 +387,8 @@ static void FIO_SyncCompressIO_finish(FIO_SyncCompressIO* io)
     FIO_sparseWriteEnd(io->prefs, io->dstFile, io->storedSkips);
     io->storedSkips = 0;
 }
+
+#endif /* ZSTD_NOCOMPRESS */
 
 /*-************************************
 *  Signal (Ctrl-C trapping)
