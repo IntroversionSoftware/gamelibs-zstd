@@ -259,13 +259,16 @@ if __name__ == '__main__':
                     shutil.copy2('dictBuilder', '{}/dictBuilder.{}'.format(tmp_dir, tag))
                 os.chdir(r_dir + '/programs')  # /path/to/zstd/tests/versionsTest/<TAG>/programs
                 make(['clean'], False)  # separate 'clean' target to allow parallel build
-                make(['zstd'], False)
+                # Enable legacy support for cross-version compatibility testing
+                make(['zstd', 'ZSTD_LEGACY_SUPPORT=5'], False)
             else:
                 os.chdir(programs_dir)
                 print('-----------------------------------------------')
                 print('compiling head')
                 print('-----------------------------------------------')
-                make(['zstd'], False)
+                # Enable legacy support for head to test cross-version compatibility
+                # (legacy support is disabled by default since v1.6.0)
+                make(['zstd', 'ZSTD_LEGACY_SUPPORT=5'], False)
             shutil.copy2('zstd', dst_zstd)
 
     # remove any remaining *.zst and *.dec from previous test
