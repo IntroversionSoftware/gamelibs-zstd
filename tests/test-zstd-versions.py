@@ -259,8 +259,15 @@ if __name__ == '__main__':
                     shutil.copy2('dictBuilder', '{}/dictBuilder.{}'.format(tmp_dir, tag))
                 os.chdir(r_dir + '/programs')  # /path/to/zstd/tests/versionsTest/<TAG>/programs
                 make(['clean'], False)  # separate 'clean' target to allow parallel build
-                # Enable legacy support for cross-version compatibility testing
-                make(['zstd', 'ZSTD_LEGACY_SUPPORT=5'], False)
+                # Enable legacy support for cross-version compatibility testing.
+                # Use ZSTD_LEGACY_SUPPORT=1 for v0.6.x due to a bug where headers
+                # check for ==1 but code checks for >=1.
+                # Use ZSTD_LEGACY_SUPPORT=5 for v1.2.0+ because =1 includes old
+                # legacy files (v01-v04) that have missing includes in newer versions.
+                if tag < 'v1.2.0':
+                    make(['zstd', 'ZSTD_LEGACY_SUPPORT=1'], False)
+                else:
+                    make(['zstd', 'ZSTD_LEGACY_SUPPORT=5'], False)
             else:
                 os.chdir(programs_dir)
                 print('-----------------------------------------------')
