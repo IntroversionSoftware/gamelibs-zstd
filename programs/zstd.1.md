@@ -158,7 +158,7 @@ the last one takes effect.
     when combined with multiple worker threads (>=2).
 * `--long[=#]`:
     enables long distance matching with `#` `windowLog`, if `#` is not
-    present it defaults to `27`. The highest possible value is 31
+    present it defaults to `27`. The highest possible value is 31.
     This increases the window size (`windowLog`) and memory usage for both the
     compressor and decompressor.
     This setting is designed to improve the compression ratio for files with
