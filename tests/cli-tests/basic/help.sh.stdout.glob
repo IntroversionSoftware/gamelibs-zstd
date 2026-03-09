@@ -5,6 +5,7 @@ Usage: zstd *OPTIONS...* *INPUT... | -* *-o OUTPUT*
 
 Options:
   -o OUTPUT                     Write output to a single file, OUTPUT.
+  -c, --stdout                  Write to STDOUT (even if it is a console) and keep the INPUT file(s).
   -k, --keep                    Preserve INPUT file(s). *Default*
   --rm                          Remove INPUT file(s) after successful (de)compression to file.
 
@@ -19,11 +20,12 @@ Options:
                                 receiving input from the console, printing output to STDOUT, and
                                 operating on links, block devices, etc. Unrecognized formats will be
                                 passed-through through as-is.
+  -q, --quiet                   Suppress warnings; pass twice to suppress errors.
 
   -h                            Display short usage and exit.
   -H, --help                    Display full help and exit.
   -V, --version                 Display the program version and exit.
-
+  
 + zstd -H
 ...
 Advanced options:
