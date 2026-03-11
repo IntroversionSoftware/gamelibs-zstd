@@ -78,7 +78,7 @@ static unsigned init_nbWorkers(unsigned defaultNbWorkers);
 #define GB *(1U<<30)
 
 #ifndef ZSTD_DISPLAY_LEVEL_DEFAULT
-#define ZSTD_DISPLAY_LEVEL_DEFAULT 2
+# define ZSTD_DISPLAY_LEVEL_DEFAULT 2
 #endif
 
 static const char*    g_defaultDictName = "dictionary";

@@ -2402,7 +2402,7 @@ int FIO_compressFilename(FIO_ctx_t* const fCtx, FIO_prefs_t* const prefs, const 
     int const result = FIO_compressFilename_srcFile(fCtx, prefs, &ress, dstFileName, srcFileName, compressionLevel);
 
 #ifndef ZSTD_DISPLAY_LEVEL_DEFAULT
-#define ZSTD_DISPLAY_LEVEL_DEFAULT 2
+# define ZSTD_DISPLAY_LEVEL_DEFAULT 2
 #endif
 
     FIO_freeCResources(&ress);
