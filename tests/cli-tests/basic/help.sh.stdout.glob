@@ -20,12 +20,11 @@ Options:
                                 receiving input from the console, printing output to STDOUT, and
                                 operating on links, block devices, etc. Unrecognized formats will be
                                 passed-through through as-is.
-  -q, --quiet                   Suppress warnings; pass twice to suppress errors.
 
   -h                            Display short usage and exit.
   -H, --help                    Display full help and exit.
   -V, --version                 Display the program version and exit.
-  
+
 + zstd -H
 ...
 Advanced options:

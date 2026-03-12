@@ -168,8 +168,7 @@ static void usage(FILE* f, const char* programName)
     DISPLAY_F(f, "  -f, --force                   Disable input and output checks. Allows overwriting existing files,\n");
     DISPLAY_F(f, "                                receiving input from the console, printing output to STDOUT, and\n");
     DISPLAY_F(f, "                                operating on links, block devices, etc. Unrecognized formats will be\n");
-    DISPLAY_F(f, "                                passed-through through as-is.\n");
-    DISPLAY_F(f, "  -q, --quiet                   Suppress warnings; pass twice to suppress errors.\n\n");
+    DISPLAY_F(f, "                                passed-through through as-is.\n\n");
 
     DISPLAY_F(f, "  -h                            Display short usage and exit.\n");
     DISPLAY_F(f, "  -H, --help                    Display full help and exit.\n");
@@ -185,6 +184,7 @@ static void usageAdvanced(const char* programName)
     DISPLAYOUT("Advanced options:\n");
 
     DISPLAYOUT("  -v, --verbose                 Enable verbose output; pass multiple times to increase verbosity.\n");
+    DISPLAY_F(f, "  -q, --quiet                   Suppress warnings; pass twice to suppress errors.\n");
 #ifndef ZSTD_NOTRACE
     DISPLAYOUT("  --trace LOG                   Log tracing information to LOG.\n");
 #endif
