@@ -184,7 +184,7 @@ static void usageAdvanced(const char* programName)
     DISPLAYOUT("Advanced options:\n");
 
     DISPLAYOUT("  -v, --verbose                 Enable verbose output; pass multiple times to increase verbosity.\n");
-    DISPLAY_F(f, "  -q, --quiet                   Suppress warnings; pass twice to suppress errors.\n");
+    DISPLAYOUT("  -q, --quiet                   Suppress warnings; pass twice to suppress errors.\n");
 #ifndef ZSTD_NOTRACE
     DISPLAYOUT("  --trace LOG                   Log tracing information to LOG.\n");
 #endif
