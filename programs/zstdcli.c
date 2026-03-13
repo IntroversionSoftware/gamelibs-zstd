@@ -149,6 +149,7 @@ static void usage(FILE* f, const char* programName)
     DISPLAY_F(f, "Usage: %s [OPTIONS...] [INPUT... | -] [-o OUTPUT]\n\n", programName);
     DISPLAY_F(f, "Options:\n");
     DISPLAY_F(f, "  -o OUTPUT                     Write output to a single file, OUTPUT.\n");
+    DISPLAY_F(f, "  -c, --stdout                  Write to STDOUT (even if it is a console) and keep the INPUT file(s).\n");
     DISPLAY_F(f, "  -k, --keep                    Preserve INPUT file(s). [Default] \n");
     DISPLAY_F(f, "  --rm                          Remove INPUT file(s) after successful (de)compression to file.\n");
 #ifdef ZSTD_GZCOMPRESS
@@ -183,7 +184,6 @@ static void usageAdvanced(const char* programName)
     DISPLAYOUT("\n");
     usage(stdout, programName);
     DISPLAYOUT("Advanced options:\n");
-    DISPLAYOUT("  -c, --stdout                  Write to STDOUT (even if it is a console) and keep the INPUT file(s).\n\n");
 
     DISPLAYOUT("  -v, --verbose                 Enable verbose output; pass multiple times to increase verbosity.\n");
     DISPLAYOUT("  -q, --quiet                   Suppress warnings; pass twice to suppress errors.\n");
