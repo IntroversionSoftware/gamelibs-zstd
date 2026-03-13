@@ -79,6 +79,13 @@ There are however other Makefile targets that create different variations of CLI
   This can be useful to produce smaller binaries.
   A corresponding `Makefile` target using this ability is `zstd-compress`.
 
+- __ZSTD_DISPLAY_LEVEL_DEFAULT__ : Controls the default verbosity level of `zstd` output.
+  The default value is `2`. Lower values (e.g., `1`) reduce output verbosity,
+  while higher values (e.g., `3`) increase it.
+  This allows setting preferred verbosity at compile time,
+  rather than passing `-q` or `-v` flags at runtime.
+  Example : `CPPFLAGS="-DZSTD_DISPLAY_LEVEL_DEFAULT=1" make`
+
 - __BACKTRACE__ : `zstd` can display a stack backtrace when execution
   generates a runtime exception. By default, this feature may be
   degraded/disabled on some platforms unless additional compiler directives are

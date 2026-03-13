@@ -77,7 +77,9 @@ static unsigned init_nbWorkers(unsigned defaultNbWorkers);
 #define MB *(1 <<20)
 #define GB *(1U<<30)
 
-#define DISPLAY_LEVEL_DEFAULT 2
+#ifndef ZSTD_DISPLAY_LEVEL_DEFAULT
+# define ZSTD_DISPLAY_LEVEL_DEFAULT 2
+#endif
 
 static const char*    g_defaultDictName = "dictionary";
 static const unsigned g_defaultMaxDictSize = 110 KB;
@@ -104,7 +106,7 @@ typedef enum { cover, fastCover, legacy } dictType;
 **************************************/
 #undef DISPLAYLEVEL
 #define DISPLAYLEVEL(l, ...) { if (g_displayLevel>=l) { DISPLAY(__VA_ARGS__); } }
-static int g_displayLevel = DISPLAY_LEVEL_DEFAULT;   /* 0 : no display,  1: errors,  2 : + result + interaction + warnings,  3 : + progression,  4 : + information */
+static int g_displayLevel = ZSTD_DISPLAY_LEVEL_DEFAULT;   /* 0 : no display,  1: errors,  2 : + result + interaction + warnings,  3 : + progression,  4 : + information */
 
 
 /*-************************************
@@ -674,7 +676,7 @@ static void setMaxCompression(ZSTD_compressionParameters* params)
 
 static void printVersion(void)
 {
-    if (g_displayLevel < DISPLAY_LEVEL_DEFAULT) {
+    if (g_displayLevel < ZSTD_DISPLAY_LEVEL_DEFAULT) {
         DISPLAYOUT("%s\n", ZSTD_VERSION_STRING);
         return;
     }
