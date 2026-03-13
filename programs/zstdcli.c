@@ -1556,7 +1556,12 @@ int main(int argCount, const char* argv[])
     /* check compression level limits */
     {   int const maxCLevel = ultra ? ZSTD_maxCLevel() : ZSTDCLI_CLEVEL_MAX;
         if (cLevel > maxCLevel) {
-            DISPLAYLEVEL(2, "Warning : compression level higher than max, reduced to %i \n", maxCLevel);
+            DISPLAYLEVEL(2, "Warning : compression level higher than max, reduced to %i. ", maxCLevel);
+            DISPLAYLEVEL(2, "Specify --ultra to raise the limit to 22 and use "
+                            "--long=31 for maximum compression. Note that this "
+                            "requires high amounts of memory, and the resulting data "
+                            "might be rejected by third-party decoders and is "
+                            "therefore only recommended for archival purposes. \n");            
             cLevel = maxCLevel;
     }   }
 #endif
